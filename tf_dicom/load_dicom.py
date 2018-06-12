@@ -9,15 +9,9 @@ import numpy as np
 from math import ceil
 import SimpleITK as sitk
 import random
+import matplotlib.pyplot as plt
 
 base_dir = "F:/IRCAD/3Dircadb1/"
-
-
-def Z_ScoreNormalization(x):
-    mu = np.average(x)
-    sigma = np.std(x) + 1e-6
-    x = (x - mu) / sigma
-    return x
 
 
 def get_slice_liver_path(base_dir, shuffle=True):
@@ -96,36 +90,51 @@ def get_batch(slice_path, liver_path, batch_size):
                     slice_batch.append(slice_path[j])
                     liver_batch.append(liver_path[j])
 
+        batch_x = []
         for image_path in slice_batch:
             image = sitk.ReadImage(image_path)
             image_array = sitk.GetArrayFromImage(image)  # z, y, x, It is a numpy.ndarray
             # normalization
-            image_array = Z_ScoreNormalization(image_array)
+
             image_array_shape = image_array.shape
             image_array = image_array.reshape(
                 (image_array_shape[2], image_array_shape[1], image_array_shape[0]))  # reshape为x, y, z
-            batch_x = image_array
+            batch_x.append(image_array)
+        batch_x = np.asarray(batch_x)
 
+        batch_y = []
         for image_path in liver_batch:
             image = sitk.ReadImage(image_path)
             image_array = sitk.GetArrayFromImage(image)  # z, y, x, It is a numpy.ndarray
             # normalization
-            image_array = Z_ScoreNormalization(image_array)
+
             image_array_shape = image_array.shape
             image_array = image_array.reshape(
                 (image_array_shape[2], image_array_shape[1], image_array_shape[0]))  # reshape为x, y, z
-            batch_y = image_array
+            batch_y.append(image_array)
+        batch_y = np.asarray(batch_y)
 
         yield (batch_x, batch_y)
 
 
+'''
 slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
-j = 0
 for i in get_batch(slice_path_list, liver_path_list, 4):
-    print(i)
-    print(np.max(i[0]))
-    print(np.min(i[0]))
-    print("@" * 10)
-    print(np.max(i[1]))
-    print(np.min(i[1]))
+    # print(i)
+    # print(np.max(i[0]))
+    # print(np.min(i[0]))
+    # print("@" * 10)
+    # print(np.max(i[1]))
+    # print(np.min(i[1]))
+
+    # print(i[0])
+    print(i[0].shape)
+    print(i[0][0].shape)  # i[0][0]为读取出来的单张dicom图片,shape = (512, 512, 1)
+    # print(i[0][0][0][0][0].type)
     break
+
+# aa_path = "F:/IRCAD/3Dircadb1/3Dircadb1.1/PATIENT_DICOM/image_0"
+# img = sitk.ReadImage(aa_path)
+# scalarImage = sitk.Cast(img, sitk.sitkUInt32)
+# sitk.Show(scalarImage)
+'''
