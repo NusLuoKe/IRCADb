@@ -103,7 +103,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
              dropout_rate=0.0, weight_decay=1e-4, classes=1000, weights_path=None):
     '''Instantiate the DenseNet 161 architecture,
         # Arguments
-            x:input data (512*512*3)
+            x:input data (512*512*1)
             nb_dense_block: number of dense blocks to add to end
             growth_rate: number of filters to add per dense block
             nb_filter: initial number of filters
@@ -113,7 +113,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
             classes: optional number of classes to classify images
             weights_path: path to pre-trained weights
         # Returns
-            x.shape = (batch_size, 512, 512, 3)
+            x.shape = (batch_size, 512, 512, 1)
             call x.output, then it is a 4D tensor
     '''
     # From architecture for ImageNet (Table 1 in the paper)
@@ -197,7 +197,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
 
     # Last convolution
     ac_up4_chanels = ac_up4.outputs.get_shape().as_list()[3]
-    x = Conv2dLayer(ac_up4, shape=[1, 1, ac_up4_chanels, 3], strides=[1, 1, 1, 1], padding='SAME',
+    x = Conv2dLayer(ac_up4, shape=[1, 1, ac_up4_chanels, 1], strides=[1, 1, 1, 1], padding='SAME',
                     b_init=None, name="dense167classifer")
 
     return x

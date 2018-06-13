@@ -9,9 +9,6 @@ import numpy as np
 from math import ceil
 import SimpleITK as sitk
 import random
-import matplotlib.pyplot as plt
-
-base_dir = "F:/IRCAD/3Dircadb1/"
 
 
 def get_slice_liver_path(base_dir, shuffle=True):
@@ -53,8 +50,8 @@ def get_tra_val_test_set(slice_path, liver_path, tra_ratio=0.8, val_ratio=0.1):
     :return: 返回的为参数类型为list. eg: training_set = [[1], [2]], [1]和[2]为存放img和label的文件路径的list
     '''
     item_num = len(slice_path)
-    train_num = item_num * tra_ratio
-    val_num = item_num * val_ratio
+    train_num = int(item_num * tra_ratio)
+    val_num = int(item_num * val_ratio)
 
     training_set_slice = slice_path[:train_num]
     training_set_liver = liver_path[:train_num]
@@ -90,6 +87,7 @@ def get_batch(slice_path, liver_path, batch_size):
                     slice_batch.append(slice_path[j])
                     liver_batch.append(liver_path[j])
 
+        ######################################################################
         batch_x = []
         for image_path in slice_batch:
             image = sitk.ReadImage(image_path)
@@ -117,21 +115,8 @@ def get_batch(slice_path, liver_path, batch_size):
         yield (batch_x, batch_y)
 
 
-# '''
-slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
-for i in get_batch(slice_path_list, liver_path_list, 4):
-    # print(i)
-    print(np.max(i[0]))
-    print(np.min(i[0]))
-    print("@" * 10)
-    print(np.max(i[1]))
-    print(np.min(i[1]))
-
-    # print(i[0])
-    # print(i[0].shape)
-    # print(i[0][0].shape)  # i[0][0]为读取出来的单张dicom图片,shape = (512, 512, 1)
-    # print(i[0][0][0][0][0].type)
-    break
-
-
-# '''
+# base_dir = "F:/IRCAD/3Dircadb1/"
+# slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
+# for i in get_batch(slice_path_list, liver_path_list, batch_size=2):
+#     print(i[0].shape)
+#     print("@@@@@@")

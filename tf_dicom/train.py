@@ -14,20 +14,20 @@ slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
 training_set, validation_set, test_set = get_tra_val_test_set(slice_path_list, liver_path_list)
 
 batch_size = 4
-img_deps = 224
-img_rows = 224
-img_cols = 3
-n_class = 3
+length = 224
+width = 224
+channel = 1
 
 
 def train():
     # GPU limit
     os.environ["CUDA_VISIBLE_DEVICES"] = "2"
-    config = tf.ConfigProto(allow_growth=True, per_process_gpu_memory_fraction=0.9)
+    config = tf.ConfigProto(allow_soft_placement=True)
+    config.gpu_options.per_process_gpu_memory_fraction = 0.9
 
     # define placeholder
-    x_img = tf.placeholder(tf.float32, shape=[None, img_deps, img_rows, 3])
-    y_true = tf.placeholder(tf.float32, shape=[None, img_deps, img_rows, 1])
+    x_img = tf.placeholder(tf.float32, shape=[batch_size, length, width, channel])
+    y_true = tf.placeholder(tf.float32, shape=[batch_size, length, width, channel])
 
     # 1. Forward propagation
     pred = model.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
@@ -40,10 +40,9 @@ def train():
     learning_rate = 1e-6
     train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
-    with tf.Session() as sess:
+    with tf.Session(config=config) as sess:
         # initial  variables
         init_op = tf.global_variables_initializer()
-        sess.run(config)
         sess.run(init_op)
 
         # set epochs
@@ -58,7 +57,8 @@ def train():
 
                 sess.run(train_step,
                          feed_dict={x_img: batch_x, y_true: batch_y})
+                print("yes")
 
-                if step % 10 == 0:
-                    # 一会儿换成dice
-                    print(sess.run(loss, feed_dict={x_img: batch_x, y_true: batch_y}))
+
+if __name__ == '__main__':
+    train()
