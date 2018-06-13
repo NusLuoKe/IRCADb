@@ -117,24 +117,21 @@ def get_batch(slice_path, liver_path, batch_size):
         yield (batch_x, batch_y)
 
 
-'''
+# '''
 slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
 for i in get_batch(slice_path_list, liver_path_list, 4):
     # print(i)
-    # print(np.max(i[0]))
-    # print(np.min(i[0]))
-    # print("@" * 10)
-    # print(np.max(i[1]))
-    # print(np.min(i[1]))
+    print(np.max(i[0]))
+    print(np.min(i[0]))
+    print("@" * 10)
+    print(np.max(i[1]))
+    print(np.min(i[1]))
 
     # print(i[0])
-    print(i[0].shape)
-    print(i[0][0].shape)  # i[0][0]为读取出来的单张dicom图片,shape = (512, 512, 1)
+    # print(i[0].shape)
+    # print(i[0][0].shape)  # i[0][0]为读取出来的单张dicom图片,shape = (512, 512, 1)
     # print(i[0][0][0][0][0].type)
     break
 
-# aa_path = "F:/IRCAD/3Dircadb1/3Dircadb1.1/PATIENT_DICOM/image_0"
-# img = sitk.ReadImage(aa_path)
-# scalarImage = sitk.Cast(img, sitk.sitkUInt32)
-# sitk.Show(scalarImage)
-'''
+
+# '''
