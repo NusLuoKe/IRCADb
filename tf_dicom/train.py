@@ -56,9 +56,8 @@ def train():
                 batch_x = batch_x_y[0]
                 batch_y = batch_x_y[1]
 
-                sess.run(train_step,
-                         feed_dict={x_img: batch_x, y_true: batch_y})
-                print("yes")
+                print(sess.run([train_step, loss],
+                               feed_dict={x_img: batch_x, y_true: batch_y}))
 
 
 if __name__ == '__main__':
