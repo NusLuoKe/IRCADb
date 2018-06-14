@@ -50,7 +50,7 @@ def train():
         for epoch in range(nb_epoch):
             print("EPOCH=%s:" % epoch)
             step = 0
-            for batch_x_y in get_batch(slice_path=training_set[0], liver_path=training_set[1], batch_size=4):
+            for batch_x_y in get_batch(slice_path=training_set[0], liver_path=training_set[1], batch_size=batch_size):
                 step += 1
                 batch_x = batch_x_y[0]
                 batch_y = batch_x_y[1]
