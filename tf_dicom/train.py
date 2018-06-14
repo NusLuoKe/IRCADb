@@ -8,14 +8,15 @@ from tf_dicom.load_dicom import *
 import tensorflow as tf
 from tf_dicom import model
 
+# base_dir = "/home/guest/notebooks/datasets/3Dircadb"
 base_dir = "F:/IRCAD/3Dircadb1/"
 
 slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
 training_set, validation_set, test_set = get_tra_val_test_set(slice_path_list, liver_path_list)
 
 batch_size = 4
-length = 224
-width = 224
+length = 512
+width = 512
 channel = 1
 
 
