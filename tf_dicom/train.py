@@ -6,11 +6,38 @@
 
 from tf_dicom.load_dicom import *
 import tensorflow as tf
-from tf_dicom import model
+from tf_dicom import dense_unet
 import tensorlayer as tl
 
 # base_dir = "/home/guest/notebooks/datasets/3Dircadb"
 base_dir = "F:/IRCAD/3Dircadb1/"
+
+
+def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
+    inse = tf.reduce_sum(output * target, axis=axis)
+    if loss_type == 'jaccard':
+        l = tf.reduce_sum(output * output, axis=axis)
+        r = tf.reduce_sum(target * target, axis=axis)
+    elif loss_type == 'sorensen':
+        l = tf.reduce_sum(output, axis=axis)
+        r = tf.reduce_sum(target, axis=axis)
+    else:
+        raise Exception("Unknow loss_type")
+
+    dice = (2. * inse + smooth) / (l + r + smooth)
+    dice = tf.reduce_mean(dice)
+    return dice
+
+
+def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
+    output = tf.cast(output > threshold, dtype=tf.float32)
+    target = tf.cast(target > 0.5, dtype=tf.float32)
+    inse = tf.reduce_sum(tf.multiply(output, target), axis=axis)
+    l = tf.reduce_sum(output, axis=axis)
+    r = tf.reduce_sum(target, axis=axis)
+    hard_dice = (2. * inse + smooth) / (l + r + smooth)
+    return hard_dice
+
 
 slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
 training_set, validation_set, test_set = get_tra_val_test_set(slice_path_list, liver_path_list)
@@ -32,17 +59,17 @@ def train_and_val():
     y_true = tf.placeholder(tf.float32, shape=[batch_size, length, width, channel])
 
     # 1. Forward propagation
-    pred = model.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
+    pred = dense_unet.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
     y_pred = pred.outputs  # (4, 512, 512, 1)
 
     # 2. loss
     loss_ce = tf.reduce_mean(
         tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred), axis=(1, 2, 3)))
-    loss_dice = 1 - model.dice_coe(tf.sigmoid(y_pred), y_true)
+    loss_dice = 1 - dice_coe(tf.sigmoid(y_pred), y_true)
     loss = loss_dice + loss_ce
 
     # 3. dice
-    dice = model.dice_hard_coef(y_pred, y_true, threshold=0)
+    dice = dice_hard_coe(y_pred, y_true, threshold=0)
 
     # 4. optimizer
     learning_rate = 1e-3
@@ -105,7 +132,7 @@ def train_and_val():
         test_batch_y = np.asarray(test_batch_y)
         test_batch_y = test_batch_y.reshape((test_batch_y.shape[0], test_batch_y.shape[1], test_batch_y.shape[2], 1))
         test_loss, test_dice = sess.run([loss, dice], feed_dict={x_img: test_batch_x, y_true: test_batch_y})
-        print('Step %d, test loss = %.8f, test dice = %.8f' % (step, test_loss, test_dice))
+        print('test loss = %.8f, test dice = %.8f' % (test_loss, test_dice))
 
 
 if __name__ == '__main__':
