@@ -7,6 +7,7 @@
 from tf_dicom.load_dicom import *
 import tensorflow as tf
 from tf_dicom import model
+import tensorlayer as tl
 
 # base_dir = "/home/guest/notebooks/datasets/3Dircadb"
 base_dir = "F:/IRCAD/3Dircadb1/"
@@ -22,7 +23,7 @@ channel = 1
 
 def train_and_val():
     # GPU limit
-    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.per_process_gpu_memory_fraction = 0.9
 
@@ -32,17 +33,19 @@ def train_and_val():
 
     # 1. Forward propagation
     pred = model.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
-    y_pred = pred.outputs  # (512, 512, 1)
+    y_pred = pred.outputs  # (4, 512, 512, 1)
 
     # 2. loss
-    # loss = model.cross_entropy(y_true, y_pred)
-    loss = 1 - model.dice_coef(y_true, y_pred)
+    loss_ce = tf.reduce_mean(
+        tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred), axis=(1, 2, 3)))
+    loss_dice = 1 - model.dice_coe(tf.sigmoid(y_pred), y_true)
+    loss = loss_dice + loss_ce
 
     # 3. dice
-    dice = model.dice_coef(y_true, y_pred)
+    dice = model.dice_hard_coef(y_pred, y_true, threshold=0)
 
     # 4. optimizer
-    learning_rate = 1e-6
+    learning_rate = 1e-3
     train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
     with tf.Session(config=config) as sess:
@@ -68,7 +71,7 @@ def train_and_val():
                 _, train_loss, train_dice = sess.run([train_step, loss, dice],
                                                      feed_dict={x_img: train_batch_x, y_true: train_batch_y})
 
-                print('Step %d, train loss = %.2f, train dice = %.2f%%' % (step, train_loss, train_dice))
+                print('Step %d, train loss = %.8f, train dice = %.8f' % (step, train_loss, train_dice))
 
                 if step % 20 == 0:
                     for val_batch_x_y in get_batch(slice_path=val_slice_path, liver_path=val_liver_path,
@@ -77,8 +80,7 @@ def train_and_val():
                         val_batch_y = val_batch_x_y[1]
                         val_loss, val_dice = sess.run([loss, dice],
                                                       feed_dict={x_img: val_batch_x, y_true: val_batch_y})
-                        print('Step %d, validation loss = %.2f, validation dice = %.2f%%' % (step, val_loss, val_dice))
-                        print()
+                        print('Step %d, validation loss = %.8f, validation dice = %.8f' % (step, val_loss, val_dice))
                         break
         # testing
         print("finished training")
@@ -103,7 +105,7 @@ def train_and_val():
         test_batch_y = np.asarray(test_batch_y)
         test_batch_y = test_batch_y.reshape((test_batch_y.shape[0], test_batch_y.shape[1], test_batch_y.shape[2], 1))
         test_loss, test_dice = sess.run([loss, dice], feed_dict={x_img: test_batch_x, y_true: test_batch_y})
-        print('Step %d, test loss = %.2f, test dice = %.2f%%' % (step, test_loss, test_dice))
+        print('Step %d, test loss = %.8f, test dice = %.8f' % (step, test_loss, test_dice))
 
 
 if __name__ == '__main__':

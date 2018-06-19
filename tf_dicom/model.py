@@ -13,6 +13,7 @@ from tensorlayer.layers import Conv2dLayer
 from tensorlayer.layers import UpSampling2dLayer, MeanPool2d
 
 
+is_train = True
 def conv_block(x, stage, branch, nb_filter, dropout_rate=None, weight_decay=1e-4):
     '''Apply BatchNorm, Relu, bottleneck 1x1 Conv2D, 3x3 Conv2D, and option dropout
         # Arguments
@@ -28,7 +29,7 @@ def conv_block(x, stage, branch, nb_filter, dropout_rate=None, weight_decay=1e-4
     batch_size, x_row, x_col, x_channels = x.outputs.get_shape().as_list()
     # 1x1 Convolution (Bottleneck layer)
     inter_channel = nb_filter * 4
-    x = BatchNormLayer(x, epsilon=eps, act=tf.nn.relu, is_train=True,
+    x = BatchNormLayer(x, epsilon=eps, act=tf.nn.relu, is_train=is_train,
                        name=conv_name_base + '_x1_bn')
     x = Conv2dLayer(x, shape=[1, 1, x_channels, inter_channel], strides=[1, 1, 1, 1],
                     b_init=None, name=conv_name_base + '_x1')
@@ -37,7 +38,7 @@ def conv_block(x, stage, branch, nb_filter, dropout_rate=None, weight_decay=1e-4
         x = DropoutLayer(x, keep=dropout_rate)
 
     # 3x3 Convolution
-    x = BatchNormLayer(x, epsilon=eps, act=tf.nn.relu, is_train=True,
+    x = BatchNormLayer(x, epsilon=eps, act=tf.nn.relu, is_train=is_train,
                        name=conv_name_base + '_x2_bn')
     x_channels = x.outputs.get_shape().as_list()[3]
     x = Conv2dLayer(x, shape=[3, 3, x_channels, nb_filter], strides=[1, 1, 1, 1], padding='SAME',
@@ -88,7 +89,7 @@ def transition_block(x, stage, nb_filter, compression=1.0, dropout_rate=None, we
 
     batch_size, x_row, x_col, x_channels = x.outputs.get_shape().as_list()
 
-    x = BatchNormLayer(x, act=tf.nn.relu, epsilon=eps, is_train=True,
+    x = BatchNormLayer(x, act=tf.nn.relu, epsilon=eps, is_train=is_train,
                        name=conv_name_base + '_bn')
     x = Conv2dLayer(x, shape=[1, 1, x_channels, nb_filter * compression], strides=[1, 1, 1, 1],
                     name=conv_name_base, b_init=None)
@@ -131,7 +132,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
     # Initial convolution
     x = Conv2dLayer(inputs, shape=[7, 7, x_channels, nb_filter], strides=[1, 2, 2, 1], padding='SAME',
                     b_init=None, name='cov1_1')
-    x = BatchNormLayer(x, act=tf.nn.relu, epsilon=eps, is_train=True, name='bn1')
+    x = BatchNormLayer(x, act=tf.nn.relu, epsilon=eps, is_train=is_train, name='bn1')
     x = MaxPool2d(x, filter_size=[3, 3], strides=[2, 2], name='maxpool_1')
     #    print(x.outputs.get_shape().as_list())
 
@@ -153,7 +154,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
     x, nb_filter = dense_bolck(x, final_stage, nb_layers[-1], nb_filter, growth_rate,
                                dropout_rate=dropout_rate, weight_decay=weight_decay)
 
-    x = BatchNormLayer(x, act=tf.nn.relu, epsilon=eps, is_train=True, name='conv' + str(final_stage) + '_blk_bn')
+    x = BatchNormLayer(x, act=tf.nn.relu, epsilon=eps, is_train=is_train, name='conv' + str(final_stage) + '_blk_bn')
     #    print(x.outputs.get_shape().as_list())
 
     # upsampling and conv (0)
@@ -161,7 +162,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
     up0_channels = up0.outputs.get_shape().as_list()[3]
     conv_up0 = Conv2dLayer(up0, shape=[3, 3, up0_channels, 768], strides=[1, 1, 1, 1], padding='SAME',
                            b_init=None, name="conv_up0")
-    ac_up0 = BatchNormLayer(conv_up0, act=tf.nn.relu, is_train=True, name='ac_up0')
+    ac_up0 = BatchNormLayer(conv_up0, act=tf.nn.relu, is_train=is_train, name='ac_up0')
     #    print(ac_up0.outputs.get_shape().as_list())
 
     # upsampling and conv (1)
@@ -169,7 +170,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
     up1_chanels = up1.outputs.get_shape().as_list()[3]
     conv_up1 = Conv2dLayer(up1, shape=[3, 3, up1_chanels, 384], strides=[1, 1, 1, 1], padding='SAME',
                            b_init=None, name="conv_up1")
-    ac_up1 = BatchNormLayer(conv_up1, act=tf.nn.relu, is_train=True, name='ac_up1')
+    ac_up1 = BatchNormLayer(conv_up1, act=tf.nn.relu, is_train=is_train, name='ac_up1')
     #    print(ac_up1.outputs.get_shape().as_list())
 
     # upsampling and conv (2)
@@ -177,7 +178,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
     up2_chanels = up2.outputs.get_shape().as_list()[3]
     conv_up2 = Conv2dLayer(up2, shape=[3, 3, up2_chanels, 96], strides=[1, 1, 1, 1], padding='SAME',
                            b_init=None, name="conv_up2")
-    ac_up2 = BatchNormLayer(conv_up2, act=tf.nn.relu, is_train=True, name='ac_up2')
+    ac_up2 = BatchNormLayer(conv_up2, act=tf.nn.relu, is_train=is_train, name='ac_up2')
     #    print(ac_up2.outputs.get_shape().as_list())
 
     # upsampling and conv (3)
@@ -185,7 +186,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
     up3_chanels = up3.outputs.get_shape().as_list()[3]
     conv_up3 = Conv2dLayer(up3, shape=[3, 3, up3_chanels, 96], strides=[1, 1, 1, 1], padding='SAME',
                            b_init=None, name="conv_up3")
-    ac_up3 = BatchNormLayer(conv_up3, act=tf.nn.relu, is_train=True, name='ac_up3')
+    ac_up3 = BatchNormLayer(conv_up3, act=tf.nn.relu, is_train=is_train, name='ac_up3')
     #    print(ac_up3.outputs.get_shape().as_list())
 
     # upsampling and conv (4)
@@ -193,7 +194,7 @@ def DenseNet(x, nb_dense_block=4, growth_rate=48, nb_filter=96, reduction=0.0,
     up4_chanels = up4.outputs.get_shape().as_list()[3]
     conv_up4 = Conv2dLayer(up4, shape=[3, 3, up4_chanels, 64], strides=[1, 1, 1, 1], padding='SAME',
                            b_init=None, name="conv_up4")
-    ac_up4 = BatchNormLayer(conv_up4, act=tf.nn.relu, is_train=True, name='ac_up4')
+    ac_up4 = BatchNormLayer(conv_up4, act=tf.nn.relu, is_train=is_train, name='ac_up4')
     #    print(ac_up4.outputs.get_shape().as_list())
 
     # Last convolution
@@ -258,3 +259,36 @@ def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
     dice = (2. * inse + smooth) / (l + r + smooth)
     dice = tf.reduce_mean(dice)
     return dice
+
+
+def dice_hard_coef(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
+    """Non-differentiable Sørensen–Dice coefficient for comparing the similarity
+    of two batch of data, usually be used for binary image segmentation i.e. labels are binary.
+    The coefficient between 0 to 1, 1 if totally match.
+
+    Parameters
+    -----------
+    output : tensor
+        A distribution with shape: [batch_size, ....], (any dimensions).
+    target : tensor
+        The target distribution, format the same with `output`.
+    threshold : float
+        The threshold value to be true.
+    axis : tuple of integer
+        All dimensions are reduced, default ``(1,2,3)``.
+    smooth : float
+        This small value will be added to the numerator and denominator, see ``dice_coe``.
+
+    References
+    -----------
+    - `Wiki-Dice <https://en.wikipedia.org/wiki/Sørensen–Dice_coefficient>`__
+
+    """
+    output = tf.cast(output > threshold, dtype=tf.float32)
+    target = tf.cast(target > 0.5, dtype=tf.float32)
+    inse = tf.reduce_sum(tf.multiply(output, target), axis=axis)
+    l = tf.reduce_sum(output, axis=axis)
+    r = tf.reduce_sum(target, axis=axis)
+    hard_dice = (2. * inse + smooth) / (l + r + smooth)
+    #hard_dice = tf.reduce_mean(hard_dice)
+    return hard_dice

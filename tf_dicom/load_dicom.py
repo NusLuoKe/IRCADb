@@ -94,6 +94,8 @@ def get_batch(slice_path, liver_path, batch_size):
         for image_path in slice_batch:
             image_file = pydicom.dcmread(image_path)
             image_array = image_file.pixel_array
+            image_array[image_array < -1024] = -1024
+            image_array[image_array > 1024] = 1024
             image_array = (image_array + 1024) / 2048
             batch_x.append(image_array)
 
@@ -101,7 +103,7 @@ def get_batch(slice_path, liver_path, batch_size):
         for image_path in liver_batch:
             image_file = pydicom.dcmread(image_path)
             image_array = image_file.pixel_array
-            image_array = (image_array + 1024) / 2048
+            image_array[image_array == 255] = 1
             batch_y.append(image_array)
 
         batch_x = np.asarray(batch_x)
@@ -119,16 +121,3 @@ def shuffle_parallel_list(list_1, list_2):
     random.seed(rand_num)
     random.shuffle(list_2)
     return list_1, list_2
-
-#
-# base_dir = "F:/IRCAD/3Dircadb1/"
-# slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
-# for i in get_batch(slice_path=slice_path_list, liver_path=liver_path_list, batch_size=4):
-#     batch_x = i[0]
-#     batch_x1 = i[1]
-# 
-#     # print(batch_x)
-#     # print()
-#     # print(batch_x.shape)
-#     print()
-#     break
