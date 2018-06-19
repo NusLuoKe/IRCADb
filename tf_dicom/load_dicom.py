@@ -4,10 +4,10 @@
 # @File    : load_dicom.py
 # @Author  : NUS_LuoKe
 
+import math
 import os
 import random
-import math
-import matplotlib.pyplot as plt
+
 import numpy as np
 import pydicom
 
@@ -66,6 +66,7 @@ def get_tra_val_test_set(slice_path, liver_path, tra_ratio=0.8, val_ratio=0.1):
     test_set = [test_set_slice, test_set_liver]
     return training_set, validation_set, test_set
 
+
 def get_batch(slice_path, liver_path, batch_size):
     batch_num = int(math.ceil(len(slice_path) / batch_size))
 
@@ -93,12 +94,14 @@ def get_batch(slice_path, liver_path, batch_size):
         for image_path in slice_batch:
             image_file = pydicom.dcmread(image_path)
             image_array = image_file.pixel_array
+            image_array = (image_array + 1024) / 2048
             batch_x.append(image_array)
 
         batch_y = []
         for image_path in liver_batch:
             image_file = pydicom.dcmread(image_path)
             image_array = image_file.pixel_array
+            image_array = (image_array + 1024) / 2048
             batch_y.append(image_array)
 
         batch_x = np.asarray(batch_x)
@@ -109,15 +112,23 @@ def get_batch(slice_path, liver_path, batch_size):
         yield (batch_x, batch_y)
 
 
-base_dir = "F:/IRCAD/3Dircadb1/"
-slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
-for i in get_batch(slice_path=slice_path_list, liver_path=liver_path_list, batch_size=4):
-    batch_x = i[0]
+def shuffle_parallel_list(list_1, list_2):
+    rand_num = random.randint(0, 100)
+    random.seed(rand_num)
+    random.shuffle(list_1)
+    random.seed(rand_num)
+    random.shuffle(list_2)
+    return list_1, list_2
 
-    print(batch_x.shape)
-    print(batch_x)
-    print()
-    break
-
-
-
+#
+# base_dir = "F:/IRCAD/3Dircadb1/"
+# slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
+# for i in get_batch(slice_path=slice_path_list, liver_path=liver_path_list, batch_size=4):
+#     batch_x = i[0]
+#     batch_x1 = i[1]
+# 
+#     # print(batch_x)
+#     # print()
+#     # print(batch_x.shape)
+#     print()
+#     break
