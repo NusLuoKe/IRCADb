@@ -42,7 +42,7 @@ def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
     l = tf.reduce_sum(output, axis=axis)
     r = tf.reduce_sum(target, axis=axis)
     hard_dice = (2. * inse + smooth) / (l + r + smooth)
-    hard_dice = tf.reduce_mean(hard_dice)
+    # hard_dice = tf.reduce_mean(hard_dice)
     return hard_dice
 
 
@@ -90,25 +90,26 @@ def train_and_val():
             train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
             val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
             for train_batch_x_y in get_batch(train_slice_path, train_liver_path, batch_size=4, crop=True,
-                                                   center=(150, 245), width=224, height=224):
+                                             center=(150, 245), width=224, height=224):
                 step += 1
                 train_batch_x = train_batch_x_y[0]
                 train_batch_y = train_batch_x_y[1]
                 step += 1
 
-                _, train_loss, train_dice = sess.run([train_op, loss, dice],
-                                                     feed_dict={x_img: train_batch_x, y_true: train_batch_y})
-                print(train_dice)
-                print('Step %d, train loss = %.8f, train dice = %.8f' % (step, train_loss, train_dice))
+                _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
+                                                              feed_dict={x_img: train_batch_x, y_true: train_batch_y})
+                print('Step %d, train loss = %.8f, train dice = %.8f' % (
+                    step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
 
                 if step % 20 == 0:
                     for val_batch_x_y in get_batch(val_slice_path, val_liver_path, batch_size=4, crop=True,
                                                    center=(150, 245), width=224, height=224):
                         val_batch_x = val_batch_x_y[0]
                         val_batch_y = val_batch_x_y[1]
-                        val_loss, val_dice = sess.run([loss, dice],
-                                                      feed_dict={x_img: val_batch_x, y_true: val_batch_y})
-                        print('Step %d, validation loss = %.8f, validation dice = %.8f' % (step, val_loss, val_dice))
+                        val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
+                                                               feed_dict={x_img: val_batch_x, y_true: val_batch_y})
+                        print("Step %d, validation loss = %.8f, validation dice = %.8f" % (
+                        step, val_loss, np.mean(val_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
                         print("\n")
                         break
         # testing
