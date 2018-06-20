@@ -31,7 +31,7 @@ def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
 
 def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
     output = tf.cast(output > threshold, dtype=tf.float32)
-    target = tf.cast(target > 0.5, dtype=tf.float32)
+    target = tf.cast(target > threshold, dtype=tf.float32)
     inse = tf.reduce_sum(tf.multiply(output, target), axis=axis)
     l = tf.reduce_sum(output, axis=axis)
     r = tf.reduce_sum(target, axis=axis)
@@ -69,11 +69,12 @@ def train_and_val():
     loss = loss_dice + loss_ce
 
     # 3. dice
-    dice = dice_hard_coe(y_pred, y_true, threshold=0)
+    sig_y_pred = tf.sigmoid(y_pred)
+    dice = dice_hard_coe(sig_y_pred, y_true, threshold=0.5)
 
     # 4. optimizer
     learning_rate = 1e-3
-    train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+    train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
     with tf.Session(config=config) as sess:
         # initial  variables
@@ -95,7 +96,7 @@ def train_and_val():
                 train_batch_y = train_batch_x_y[1]
                 step += 1
 
-                _, train_loss, train_dice = sess.run([train_step, loss, dice],
+                _, train_loss, train_dice = sess.run([train_op, loss, dice],
                                                      feed_dict={x_img: train_batch_x, y_true: train_batch_y})
 
                 print('Step %d, train loss = %.8f, train dice = %.8f' % (step, train_loss, train_dice))
