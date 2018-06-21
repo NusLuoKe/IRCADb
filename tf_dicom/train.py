@@ -110,9 +110,9 @@ def train_and_val():
         init_op = tf.global_variables_initializer()
         sess.run(init_op)
 
+        step = 0
         for epoch in range(nb_epoch):
             print("EPOCH=%s:" % epoch)
-            step = 0
             train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
             val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
             for train_batch_x_y in get_batch(train_slice_path, train_liver_path, batch_size=4, crop=True,
