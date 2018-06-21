@@ -55,11 +55,11 @@ def crop(x, width, height, random_crop=False, row_index=0, col_index=1):
         return x[h_offset:h_end, w_offset:w_end]
 
 
-def get_slice_liver_path(base_dir, shuffle=True):
+def get_slice_liver_path(base_dir, patient_id_list, shuffle=True, ):
     slice_path_list = []  # 将所有图片的文件名的路径存成slice_path_list
     liver_path_list = []  # 将所有图片中liver的mask的文件名的路径存成liver_path_list
     # patient__num = len(os.listdir(base_dir))
-    patient_id_list = [i for i in range(1, 20)]  # 留出最后一个病人的数据做验证集
+    # patient_id_list = [i for i in range(1, 20)]  # 留出最后一个病人的数据做验证集
 
     for patient_id in patient_id_list:
         patient_dicom_path = "3Dircadb1." + str(patient_id) + "/PATIENT_DICOM"
@@ -85,24 +85,25 @@ def get_slice_liver_path(base_dir, shuffle=True):
     return slice_path_list, liver_path_list
 
 
-def get_tra_val_set(slice_path, liver_path, tra_ratio=0.8):
-    '''
-    :param slice_path: 存放所有slice文件路径的list
-    :param liver_path: 存放所有slice对应的liver文件路径的list
-    :param tra_ratio: 训练集的比例
-    :return: list type. eg: training_set = [[1], [2]], [1]和[2]为存放img和label的文件路径的list
-    '''
-    item_num = len(slice_path)
-    train_num = int(item_num * tra_ratio)
-
-    training_set_slice = slice_path[:train_num]
-    training_set_liver = liver_path[:train_num]
-    validation_set_slice = slice_path[train_num:]
-    validation_set_liver = liver_path[train_num:]
-
-    training_set = [training_set_slice, training_set_liver]
-    validation_set = [validation_set_slice, validation_set_liver]
-    return training_set, validation_set
+# def get_tra_val_set(slice_path, liver_path, tra_ratio=0.8):
+#     '''
+#      Not a good method to split data set, the result will be high.
+#     :param slice_path: 存放所有slice文件路径的list
+#     :param liver_path: 存放所有slice对应的liver文件路径的list
+#     :param tra_ratio: 训练集的比例
+#     :return: list type. eg: training_set = [[1], [2]], [1]和[2]为存放img和label的文件路径的list
+#     '''
+#     item_num = len(slice_path)
+#     train_num = int(item_num * tra_ratio)
+#
+#     training_set_slice = slice_path[:train_num]
+#     training_set_liver = liver_path[:train_num]
+#     validation_set_slice = slice_path[train_num:]
+#     validation_set_liver = liver_path[train_num:]
+#
+#     training_set = [training_set_slice, training_set_liver]
+#     validation_set = [validation_set_slice, validation_set_liver]
+#     return training_set, validation_set
 
 
 def get_batch(slice_path, liver_path, batch_size, crop=False, center=None, height=None, width=None):

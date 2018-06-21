@@ -19,28 +19,19 @@ width = 224
 channel = 1
 nb_epoch = 1000
 
-# get training and validation set from patient_1 to patient_19
-slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
-training_set, validation_set = get_tra_val_set(slice_path_list, liver_path_list)
+# get training set from patient_1 to patient_18
+train_slice_path_list, train_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=list(range(1, 18)),
+                                                                    shuffle=True)
+training_set = [train_slice_path_list, train_liver_path_list]
+
+# get validation set from patient_19
+validation_slice_path_list, validation_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[19],
+                                                                              shuffle=True)
+validation_set = [validation_slice_path_list, validation_liver_path_list]
 
 # get test set from patient_20
-test_patient_dicom_path = os.path.join(base_dir, "3Dircadb1.20/PATIENT_DICOM")
-test_liver_dicom_path = os.path.join(base_dir, "3Dircadb1.20/MASKS_DICOM/portalvein")
-
-test_set = [[], []]
-for slice in os.listdir(test_patient_dicom_path):
-    single_slice_path = os.path.join(test_patient_dicom_path, slice)
-    test_set[0].append(single_slice_path)
-
-for liver in os.listdir(test_liver_dicom_path):
-    single_liver_path = os.path.join(test_liver_dicom_path, liver)
-    test_set[1].append(single_liver_path)
-
-rand_num = random.randint(0, 100)
-random.seed(rand_num)
-random.shuffle(test_set[0])
-random.seed(rand_num)
-random.shuffle(test_set[1])
+test_slice_path_list, test_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[20], shuffle=True)
+test_set = [test_slice_path_list, test_liver_path_list]
 
 
 def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
@@ -139,8 +130,8 @@ def train_and_val():
                             step, val_loss, np.mean(val_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
                         print("\n")
                         break
-            if epoch % 20 == 0:
-                saver.save(sess, checkpoint_dir + 'model.ckpt')
+            if step % 5000 == 0:
+                saver.save(sess, checkpoint_dir + 'model.ckpt', global_step=step)
 
         print("finished training")
         print("begin to test...")
