@@ -9,14 +9,38 @@ import tensorflow as tf
 from tf_dicom import dense_unet
 from tf_dicom.load_dicom import *
 
-# base_dir = "/home/guest/notebooks/datasets/3Dircadb"
-base_dir = "F:/IRCAD/3Dircadb1/"
+# base_dir = "F:/IRCAD/3Dircadb1/"
+base_dir = "/home/guest/notebooks/datasets/3Dircadb"
+checkpoint_dir = "/home/guest/notebooks/luoke/Model_Weights"
 
 batch_size = 4
 length = 224
 width = 224
 channel = 1
-nb_epoch = 20
+nb_epoch = 1000
+
+# get training and validation set from patient_1 to patient_19
+slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
+training_set, validation_set = get_tra_val_set(slice_path_list, liver_path_list)
+
+# get test set from patient_20
+test_patient_dicom_path = os.path.join(base_dir, "3Dircadb1.20/PATIENT_DICOM")
+test_liver_dicom_path = os.path.join(base_dir, "3Dircadb1.20/MASKS_DICOM/portalvein")
+
+test_set = [[], []]
+for slice in os.listdir(test_patient_dicom_path):
+    single_slice_path = os.path.join(test_patient_dicom_path, slice)
+    test_set[0].append(single_slice_path)
+
+for liver in os.listdir(test_liver_dicom_path):
+    single_liver_path = os.path.join(test_liver_dicom_path, liver)
+    test_set[1].append(single_liver_path)
+
+rand_num = random.randint(0, 100)
+random.seed(rand_num)
+random.shuffle(test_set[0])
+random.seed(rand_num)
+random.shuffle(test_set[1])
 
 
 def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
@@ -46,10 +70,6 @@ def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
     return hard_dice
 
 
-slice_path_list, liver_path_list = get_slice_liver_path(base_dir, shuffle=True)
-training_set, validation_set, test_set = get_tra_val_test_set(slice_path_list, liver_path_list)
-
-
 def train_and_val():
     # GPU limit
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -68,7 +88,8 @@ def train_and_val():
     loss_ce = tf.reduce_mean(
         tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred), axis=(1, 2, 3)))
     loss_dice = 1 - dice_coe(tf.sigmoid(y_pred), y_true)
-    loss = loss_dice + loss_ce
+    # loss = loss_dice + loss_ce
+    loss = loss_dice
 
     # 3. dice
     sig_y_pred = tf.sigmoid(y_pred)
@@ -78,9 +99,14 @@ def train_and_val():
     learning_rate = 1e-3
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
 
-    with tf.Session(config=config) as sess:
-        # initial  variables
+    # saver
+    saver = tf.train.Saver()
 
+    with tf.Session(config=config) as sess:
+        print("start session...")
+        print("The total number of training epoch is: %s " % nb_epoch)
+
+        # initial  variables
         init_op = tf.global_variables_initializer()
         sess.run(init_op)
 
@@ -94,26 +120,45 @@ def train_and_val():
                 step += 1
                 train_batch_x = train_batch_x_y[0]
                 train_batch_y = train_batch_x_y[1]
-                step += 1
 
                 _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
                                                               feed_dict={x_img: train_batch_x, y_true: train_batch_y})
-                print('Step %d, train loss = %.8f, train dice = %.8f' % (
-                    step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
 
-                if step % 20 == 0:
+                if step % 5 == 0:
+                    print('Step %d, train loss = %.8f, train dice = %.8f' % (
+                        step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
+
+                if step % 200 == 0:
                     for val_batch_x_y in get_batch(val_slice_path, val_liver_path, batch_size=4, crop=True,
                                                    center=(150, 245), width=224, height=224):
                         val_batch_x = val_batch_x_y[0]
                         val_batch_y = val_batch_x_y[1]
                         val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
                                                                feed_dict={x_img: val_batch_x, y_true: val_batch_y})
-                        print("Step %d, validation loss = %.8f, validation dice = %.8f" % (
-                        step, val_loss, np.mean(val_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
+                        print('Step %d, validation loss = %.8f, validation dice = %.8f' % (
+                            step, val_loss, np.mean(val_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
                         print("\n")
                         break
-        # testing
+            if epoch % 20 == 0:
+                saver.save(sess, checkpoint_dir + 'model.ckpt')
+
         print("finished training")
+        print("begin to test...")
+        test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
+        count = 0
+        for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=20, crop=True,
+                                        center=(150, 245), width=224, height=224):
+            count += 1
+            test_batch_x = test_batch_x_y[0]
+            test_batch_y = test_batch_x_y[1]
+            test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
+                                                     feed_dict={x_img: test_batch_x, y_true: test_batch_y})
+            print('test loss = %.8f, test dice = %.8f' % (
+                test_loss, np.mean(test_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
+            print("\n")
+            if count == 5:
+                break
+
         print("*" * 30)
         print("*" * 30)
 
