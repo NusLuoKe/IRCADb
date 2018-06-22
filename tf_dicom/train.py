@@ -14,13 +14,14 @@ base_dir = "/home/guest/notebooks/datasets/3Dircadb"
 checkpoint_dir = "/home/guest/notebooks/luoke/Model_Weights"
 
 batch_size = 4
-length = 224
-width = 224
+length = 512
+width = 512
 channel = 1
 nb_epoch = 1000
 
 # get training set from patient_1 to patient_18
-train_slice_path_list, train_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=list(range(1, 18)),
+train_patient_id_list = list(range(1, 19))
+train_slice_path_list, train_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=train_patient_id_list,
                                                                     shuffle=True)
 training_set = [train_slice_path_list, train_liver_path_list]
 
@@ -106,7 +107,7 @@ def train_and_val():
             print("EPOCH=%s:" % epoch)
             train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
             val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
-            for train_batch_x_y in get_batch(train_slice_path, train_liver_path, batch_size=4, crop=True,
+            for train_batch_x_y in get_batch(train_slice_path, train_liver_path, batch_size=4, crop=False,
                                              center=(150, 245), width=224, height=224):
                 step += 1
                 train_batch_x = train_batch_x_y[0]
@@ -120,7 +121,7 @@ def train_and_val():
                         step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
 
                 if step % 200 == 0:
-                    for val_batch_x_y in get_batch(val_slice_path, val_liver_path, batch_size=4, crop=True,
+                    for val_batch_x_y in get_batch(val_slice_path, val_liver_path, batch_size=4, crop=False,
                                                    center=(150, 245), width=224, height=224):
                         val_batch_x = val_batch_x_y[0]
                         val_batch_y = val_batch_x_y[1]
@@ -137,7 +138,7 @@ def train_and_val():
         print("begin to test...")
         test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
         count = 0
-        for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=20, crop=True,
+        for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=20, crop=False,
                                         center=(150, 245), width=224, height=224):
             count += 1
             test_batch_x = test_batch_x_y[0]

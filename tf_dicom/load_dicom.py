@@ -55,7 +55,7 @@ def crop(x, width, height, random_crop=False, row_index=0, col_index=1):
         return x[h_offset:h_end, w_offset:w_end]
 
 
-def get_slice_liver_path(base_dir, patient_id_list, shuffle=True, ):
+def get_slice_liver_path(base_dir, patient_id_list=None, shuffle=True):
     slice_path_list = []  # 将所有图片的文件名的路径存成slice_path_list
     liver_path_list = []  # 将所有图片中liver的mask的文件名的路径存成liver_path_list
     # patient__num = len(os.listdir(base_dir))
@@ -63,7 +63,8 @@ def get_slice_liver_path(base_dir, patient_id_list, shuffle=True, ):
 
     for patient_id in patient_id_list:
         patient_dicom_path = "3Dircadb1." + str(patient_id) + "/PATIENT_DICOM"
-        liver_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/portalvein"
+        # liver_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/portalvein"
+        liver_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/liver"
         slice_path = os.path.join(base_dir, patient_dicom_path)
         liver_path = os.path.join(base_dir, liver_dicom_path)
 
