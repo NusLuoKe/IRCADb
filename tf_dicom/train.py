@@ -5,6 +5,8 @@
 # @Author  : NUS_LuoKe
 
 import tensorflow as tf
+from scipy.misc import imresize
+from skimage.measure import regionprops
 
 from tf_dicom import dense_unet
 from tf_dicom.load_dicom import *
@@ -107,11 +109,12 @@ def train_and_val():
             print("EPOCH=%s:" % epoch)
             train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
             val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
-            for train_batch_x_y in get_batch(train_slice_path, train_liver_path, batch_size=4, crop=False,
-                                             center=(150, 245), width=224, height=224):
+            for train_batch_x_y in get_batch_crop_center(train_slice_path, train_liver_path, batch_size=4,
+                                                         crop_by_center=False):
                 step += 1
                 train_batch_x = train_batch_x_y[0]
                 train_batch_y = train_batch_x_y[1]
+                train_batch_x, train_batch_y = enlarge_slice(train_batch_x, train_batch_y)
 
                 _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
                                                               feed_dict={x_img: train_batch_x, y_true: train_batch_y})
@@ -121,10 +124,12 @@ def train_and_val():
                         step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
 
                 if step % 200 == 0:
-                    for val_batch_x_y in get_batch(val_slice_path, val_liver_path, batch_size=4, crop=False,
-                                                   center=(150, 245), width=224, height=224):
+                    for val_batch_x_y in get_batch_crop_center(val_slice_path, val_liver_path, batch_size=4,
+                                                               crop_by_center=False):
                         val_batch_x = val_batch_x_y[0]
                         val_batch_y = val_batch_x_y[1]
+                        val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y)
+
                         val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
                                                                feed_dict={x_img: val_batch_x, y_true: val_batch_y})
                         print('Step %d, validation loss = %.8f, validation dice = %.8f' % (
@@ -138,11 +143,12 @@ def train_and_val():
         print("begin to test...")
         test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
         count = 0
-        for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=20, crop=False,
-                                        center=(150, 245), width=224, height=224):
+        for test_batch_x_y in get_batch_crop_center(test_slice_path, test_liver_path, batch_size=20,
+                                                    crop_by_center=False):
             count += 1
             test_batch_x = test_batch_x_y[0]
             test_batch_y = test_batch_x_y[1]
+            test_batch_x, test_batch_y = enlarge_slice(test_batch_x, test_batch_y)
             test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
                                                      feed_dict={x_img: test_batch_x, y_true: test_batch_y})
             print('test loss = %.8f, test dice = %.8f' % (

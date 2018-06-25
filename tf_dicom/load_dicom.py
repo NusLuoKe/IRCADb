@@ -10,9 +10,28 @@ import random
 
 import numpy as np
 import pydicom
+from scipy.misc import imresize
+from skimage.measure import regionprops
+
+
+def set_square_crop(x, min_row, min_col, max_row, max_col):
+    # return x[min_row:max_row, min_col:max_col]
+    if max_row - min_row > max_col - min_col:
+        return x[min_row:max_row, min_row:max_row]
+    else:
+        return x[min_col:max_col, min_col:max_col]
 
 
 def set_center_crop(x, width, height, center, row_index=0, col_index=1):
+    '''
+    :param x:input, numpy array
+    :param width: width of the output
+    :param height: height of the output
+    :param center: coordinate of the crop center
+    :param row_index: row index
+    :param col_index: column index
+    :return: numpy array cropped image
+    '''
     h, w = x.shape[row_index], x.shape[col_index]
     center_h, center_w = center[row_index], center[col_index]
 
@@ -63,8 +82,8 @@ def get_slice_liver_path(base_dir, patient_id_list=None, shuffle=True):
 
     for patient_id in patient_id_list:
         patient_dicom_path = "3Dircadb1." + str(patient_id) + "/PATIENT_DICOM"
-        # liver_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/portalvein"
-        liver_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/liver"
+        liver_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/portalvein"
+        # liver_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/liver"
         slice_path = os.path.join(base_dir, patient_dicom_path)
         liver_path = os.path.join(base_dir, liver_dicom_path)
 
@@ -86,28 +105,8 @@ def get_slice_liver_path(base_dir, patient_id_list=None, shuffle=True):
     return slice_path_list, liver_path_list
 
 
-# def get_tra_val_set(slice_path, liver_path, tra_ratio=0.8):
-#     '''
-#      Not a good method to split data set, the result will be high.
-#     :param slice_path: 存放所有slice文件路径的list
-#     :param liver_path: 存放所有slice对应的liver文件路径的list
-#     :param tra_ratio: 训练集的比例
-#     :return: list type. eg: training_set = [[1], [2]], [1]和[2]为存放img和label的文件路径的list
-#     '''
-#     item_num = len(slice_path)
-#     train_num = int(item_num * tra_ratio)
-#
-#     training_set_slice = slice_path[:train_num]
-#     training_set_liver = liver_path[:train_num]
-#     validation_set_slice = slice_path[train_num:]
-#     validation_set_liver = liver_path[train_num:]
-#
-#     training_set = [training_set_slice, training_set_liver]
-#     validation_set = [validation_set_slice, validation_set_liver]
-#     return training_set, validation_set
-
-
-def get_batch(slice_path, liver_path, batch_size, crop=False, center=None, height=None, width=None):
+def get_batch_crop_center(slice_path, liver_path, batch_size, crop_by_center=False, center=None, height=None,
+                          width=None):
     batch_num = int(math.ceil(len(slice_path) / batch_size))
 
     for i in range(1, batch_num):
@@ -138,7 +137,7 @@ def get_batch(slice_path, liver_path, batch_size, crop=False, center=None, heigh
             image_array[image_array > 1024] = 1024
             image_array = (image_array + 1024) / 2048
 
-            if crop == True:
+            if crop_by_center == True:
                 image_array = set_center_crop(x=image_array, width=width, height=height, center=center)
             batch_x.append(image_array)
 
@@ -148,7 +147,7 @@ def get_batch(slice_path, liver_path, batch_size, crop=False, center=None, heigh
             image_array = image_file.pixel_array
             image_array[image_array == 255] = 1
 
-            if crop == True:
+            if crop_by_center == True:
                 image_array = set_center_crop(x=image_array, width=width, height=height, center=center)
             batch_y.append(image_array)
 
@@ -160,7 +159,67 @@ def get_batch(slice_path, liver_path, batch_size, crop=False, center=None, heigh
         yield (batch_x, batch_y)
 
 
+def enlarge_slice(batch_x, batch_y, batch_size, length=512, width=512):
+    '''
+    将一个batch的slice里面，选出mask最大的一张，以这张的有label的部分选出外接正方形，
+    按照这个正方形的大小截取这个batch的所有图片.
+    :param batch_x:
+    :param batch_y:
+    :param batch_size:
+    :param length:
+    :param width:
+    :return:
+    '''
+    if np.sum(np.sum(batch_y, axis=(1, 2, 3))) != 0:
+        # find the box to crop slices
+        largest_mask_slice = batch_y[np.argmax(np.sum(batch_y, axis=(1, 2, 3)))]
+        largest_mask_slice = np.reshape(largest_mask_slice, (largest_mask_slice.shape[0], largest_mask_slice.shape[1]))
+
+        props = regionprops(largest_mask_slice)
+        box = list(props[0].bbox)
+
+        # apply the box to all slices in the batch
+        cropped_batch_y = []
+        for i in range(batch_size):
+            slice = batch_y[i]
+            slice = np.reshape(slice, (slice.shape[0], slice.shape[1]))
+            slice = set_square_crop(slice, box[0], box[1], box[2], box[3])
+            slice = imresize(slice, (length, width))
+            cropped_batch_y.append(slice)
+
+        cropped_batch_y = np.asarray(cropped_batch_y)
+        cropped_batch_y = cropped_batch_y.reshape(
+            (cropped_batch_y.shape[0], cropped_batch_y.shape[1], cropped_batch_y.shape[2], 1))
+
+        cropped_batch_x = []
+        for i in range(batch_size):
+            slice = batch_x[i]
+            slice = np.reshape(slice, (slice.shape[0], slice.shape[1]))
+            slice = set_square_crop(slice, box[0], box[1], box[2], box[3])
+            slice = imresize(slice, (length, width))
+            cropped_batch_x.append(slice)
+
+        cropped_batch_x = np.asarray(cropped_batch_x)
+        cropped_batch_x = cropped_batch_x.reshape(
+            (cropped_batch_x.shape[0], cropped_batch_x.shape[1], cropped_batch_x.shape[2], 1))
+        return cropped_batch_x, cropped_batch_y
+    else:
+        return batch_x, batch_y
+
+
 def shuffle_parallel_list(list_1, list_2):
+    '''
+    :param list_1:
+    :param list_2:
+    :return: shuffled list_1 and list_2 with same seed
+
+    eg:
+    :param list_1:[1,2,3,4,5]
+    :param list_2:[1,2,3,4,5]
+    :return list_1:[2,3,5,4,1]
+             list_2:[2,3,5,4,1]
+    '''
+
     rand_num = random.randint(0, 100)
     random.seed(rand_num)
     random.shuffle(list_1)
