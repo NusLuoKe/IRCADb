@@ -6,7 +6,7 @@
 
 import tensorflow as tf
 
-from tf_dicom import dense_unet
+from tf_dicom import u_net
 from tf_dicom.load_dicom import *
 
 # base_dir = "F:/IRCAD/3Dircadb1/"
@@ -144,7 +144,7 @@ def train_and_val(gpu_id):
     y_true = tf.placeholder(tf.float32, shape=[batch_size, length, width, channel])
 
     # 1. Forward propagation
-    pred = dense_unet.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
+    pred = u_net.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
     y_pred = pred.outputs  # (4, 512, 512, 1)
 
     # 2. loss
@@ -160,8 +160,8 @@ def train_and_val(gpu_id):
 
     # 4. optimizer
     learning_rate = 1e-4
-    # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-    train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+    train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+    # train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
 
     # saver
     saver = tf.train.Saver()

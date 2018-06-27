@@ -2,9 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4546d927-2f36-4841-95df-c90db53edc2a" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tf_dicom/dense_unet.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tf_dicom/u_net.py" beforeDir="false" afterPath="$PROJECT_DIR$/tf_dicom/u_net.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tf_dicom/train.py" beforeDir="false" afterPath="$PROJECT_DIR$/tf_dicom/train.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -49,23 +47,11 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="u_net.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/tf_dicom/u_net.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="628">
-              <caret line="334" lean-forward="true" selection-start-line="334" selection-end-line="334" />
-              <folding>
-                <element signature="e#122#145#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="train.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="train.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/tf_dicom/train.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2002">
-              <caret line="91" column="12" lean-forward="true" selection-start-line="91" selection-start-column="12" selection-end-line="91" selection-end-column="12" />
+            <state relative-caret-position="225">
+              <caret line="202" column="35" lean-forward="true" selection-start-line="202" selection-start-column="35" selection-end-line="202" selection-end-column="35" />
               <folding>
                 <element signature="e#121#144#0" expanded="true" />
               </folding>
@@ -131,10 +117,10 @@
         <option value="$PROJECT_DIR$/tf_dicom/load_nii.py" />
         <option value="$PROJECT_DIR$/1.py" />
         <option value="$PROJECT_DIR$/2222.py" />
-        <option value="$PROJECT_DIR$/tf_dicom/train.py" />
         <option value="$PROJECT_DIR$/tf_dicom/load_dicom.py" />
         <option value="$PROJECT_DIR$/tf_dicom/dense_unet.py" />
         <option value="$PROJECT_DIR$/tf_dicom/u_net.py" />
+        <option value="$PROJECT_DIR$/tf_dicom/train.py" />
       </list>
     </option>
   </component>
@@ -679,16 +665,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tf_dicom/train.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2002">
-          <caret line="91" column="12" lean-forward="true" selection-start-line="91" selection-start-column="12" selection-end-line="91" selection-end-column="12" />
-          <folding>
-            <element signature="e#121#144#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/tf_dicom/dense_unet.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="110">
@@ -706,6 +682,16 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/tf_dicom/u_net.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="224">
+          <caret line="239" column="4" selection-start-line="239" selection-start-column="4" selection-end-line="239" selection-end-column="4" />
+          <folding>
+            <element signature="e#122#145#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/tf_dicom/load_dicom.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="192">
@@ -716,12 +702,12 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/tf_dicom/u_net.py">
+    <entry file="file://$PROJECT_DIR$/tf_dicom/train.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="628">
-          <caret line="334" lean-forward="true" selection-start-line="334" selection-end-line="334" />
+        <state relative-caret-position="225">
+          <caret line="202" column="35" lean-forward="true" selection-start-line="202" selection-start-column="35" selection-end-line="202" selection-end-column="35" />
           <folding>
-            <element signature="e#122#145#0" expanded="true" />
+            <element signature="e#121#144#0" expanded="true" />
           </folding>
         </state>
       </provider>
