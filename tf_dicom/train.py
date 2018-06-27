@@ -5,8 +5,6 @@
 # @Author  : NUS_LuoKe
 
 import tensorflow as tf
-from scipy.misc import imresize
-from skimage.measure import regionprops
 
 from tf_dicom import dense_unet
 from tf_dicom.load_dicom import *
@@ -15,6 +13,7 @@ from tf_dicom.load_dicom import *
 base_dir = "/home/guest/notebooks/datasets/3Dircadb"
 checkpoint_dir = "/home/guest/notebooks/luoke/Model_Weights"
 
+gpu_id = "0"
 batch_size = 4
 length = 512
 width = 512
@@ -35,6 +34,76 @@ validation_set = [validation_slice_path_list, validation_liver_path_list]
 # get test set from patient_20
 test_slice_path_list, test_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[20], shuffle=True)
 test_set = [test_slice_path_list, test_liver_path_list]
+
+# default color_dict for label 1-6
+default_color_dict = [
+    {'label': 1, 'color': [200, None, None]},
+    {'label': 2, 'color': [None, 200, None]},
+    {'label': 3, 'color': [None, None, 200]},
+    {'label': 4, 'color': [200, 200, None]},
+    {'label': 5, 'color': [None, 200, 200]},
+    {'label': 6, 'color': [200, None, 200]},
+]
+
+
+def display_segment(image, label, color_dicts=default_color_dict):
+    """Display segmentation results on original image.
+
+    Params
+    ------
+        image       : np.array(uint8): an array with shape (w,h)|(w,h,1)|(w,h,c) for original image
+        label       : np.array(int)  : an int(uint) array with shape (w,h)|(w,h,1) for label image
+        color_dicts : list of dicts  : a list of dictionary include label index and color
+
+    Returns
+    -------
+        image : np.array : an array for image with label
+
+    Examples
+    --------
+    >>> display = display_segment(image, label)
+    >>> display = display_segment(image, label, color_dicts=[{'label':1, 'color':[255,255,255]}])
+    """
+    if image.ndim == 2:
+        image = np.repeat(np.expand_dims(image, axis=-1), 3, axis=2)
+    elif image.ndim == 3 and image.shape[2] == 1:
+        image = np.repeat(image, 3, axis=2)
+
+    for cd in color_dicts:
+        for i, c in enumerate(cd['color']):
+            if c is not None:
+                image[:, :, i:i + 1][label == cd['label']] = c
+    return image
+
+
+def display_batch_segment(images, labels, color_dicts=default_color_dict):
+    """Display segmentation results on a batch of original images.
+
+    Params
+    ------
+        images      : np.array(uint8): an array with shape (b,w,h)|(b,w,h,1)|(b,w,h,c) for original images batch
+        labels      : np.array(int)  : an int(uint) array with shape (b,w,h)|(b,w,h,1) for label images batch
+        color_dicts : list of dicts  : a list of dictionary include label index and color
+
+    Returns
+    -------
+        images : np.array : an array for a batch of image with label
+
+    Examples
+    --------
+    >>> display = display_segment(images, labels)
+    >>> display = display_segment(images, labels, color_dicts=[{'label':1, 'color':[255,255,255]}])
+    """
+    if images.ndim == 3:
+        images = np.repeat(np.expand_dims(images, axis=-1), 3, axis=3)
+    elif images.ndim == 4 and images.shape[3] == 1:
+        images = np.repeat(images, 3, axis=3)
+
+    for cd in color_dicts:
+        for i, c in enumerate(cd['color']):
+            if c is not None:
+                images[:, :, :, i:i + 1][labels == cd['label']] = c
+    return images
 
 
 def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
@@ -64,9 +133,9 @@ def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
     return hard_dice
 
 
-def train_and_val():
+def train_and_val(gpu_id):
     # GPU limit
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.per_process_gpu_memory_fraction = 0.9
 
@@ -90,18 +159,21 @@ def train_and_val():
     dice = dice_hard_coe(sig_y_pred, y_true, threshold=0.5)
 
     # 4. optimizer
-    learning_rate = 1e-3
-    train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+    learning_rate = 1e-4
+    # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+    train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
 
     # saver
     saver = tf.train.Saver()
+
+    # define init_op
+    init_op = tf.global_variables_initializer()
 
     with tf.Session(config=config) as sess:
         print("start session...")
         print("The total number of training epoch is: %s " % nb_epoch)
 
         # initial  variables
-        init_op = tf.global_variables_initializer()
         sess.run(init_op)
 
         step = 0
@@ -109,26 +181,32 @@ def train_and_val():
             print("EPOCH=%s:" % epoch)
             train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
             val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
-            for train_batch_x_y in get_batch_crop_center(train_slice_path, train_liver_path, batch_size=4,
+            for train_batch_x_y in get_batch_crop_center(train_slice_path, train_liver_path, batch_size=batch_size,
                                                          crop_by_center=False):
                 step += 1
                 train_batch_x = train_batch_x_y[0]
                 train_batch_y = train_batch_x_y[1]
-                train_batch_x, train_batch_y = enlarge_slice(train_batch_x, train_batch_y)
+                train_batch_x, train_batch_y = enlarge_slice(train_batch_x, train_batch_y, batch_size=batch_size,
+                                                             length=length, width=width)
 
                 _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
                                                               feed_dict={x_img: train_batch_x, y_true: train_batch_y})
+
+                # tl.vis.save_images(train_batch_x, [2, 2], '/home/guest/notebooks/luoke/vis/ori_{}.png'.format(step))
+                # display = display_batch_segment(train_batch_x, train_batch_y)
+                # tl.vis.save_images(display, [2, 2], '/home/guest/notebooks/luoke/vis/seg_{}.png'.format(step))
 
                 if step % 5 == 0:
                     print('Step %d, train loss = %.8f, train dice = %.8f' % (
                         step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
 
                 if step % 200 == 0:
-                    for val_batch_x_y in get_batch_crop_center(val_slice_path, val_liver_path, batch_size=4,
+                    for val_batch_x_y in get_batch_crop_center(val_slice_path, val_liver_path, batch_size=batch_size,
                                                                crop_by_center=False):
                         val_batch_x = val_batch_x_y[0]
                         val_batch_y = val_batch_x_y[1]
-                        val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y)
+                        val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y, batch_size=batch_size,
+                                                                 length=length, width=width)
 
                         val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
                                                                feed_dict={x_img: val_batch_x, y_true: val_batch_y})
@@ -143,12 +221,14 @@ def train_and_val():
         print("begin to test...")
         test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
         count = 0
-        for test_batch_x_y in get_batch_crop_center(test_slice_path, test_liver_path, batch_size=20,
+        test_batch_size = 20
+        for test_batch_x_y in get_batch_crop_center(test_slice_path, test_liver_path, batch_size=test_batch_size,
                                                     crop_by_center=False):
             count += 1
             test_batch_x = test_batch_x_y[0]
             test_batch_y = test_batch_x_y[1]
-            test_batch_x, test_batch_y = enlarge_slice(test_batch_x, test_batch_y)
+            test_batch_x, test_batch_y = enlarge_slice(test_batch_x, test_batch_y, batch_size=test_batch_size,
+                                                       length=length, width=width)
             test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
                                                      feed_dict={x_img: test_batch_x, y_true: test_batch_y})
             print('test loss = %.8f, test dice = %.8f' % (
@@ -162,4 +242,4 @@ def train_and_val():
 
 
 if __name__ == '__main__':
-    train_and_val()
+    train_and_val(gpu_id)

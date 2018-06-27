@@ -135,7 +135,7 @@ def get_batch_crop_center(slice_path, liver_path, batch_size, crop_by_center=Fal
             image_array = image_file.pixel_array
             image_array[image_array < -1024] = -1024
             image_array[image_array > 1024] = 1024
-            image_array = (image_array + 1024) / 2048
+            image_array = (image_array + 1024.) / 2048.
 
             if crop_by_center == True:
                 image_array = set_center_crop(x=image_array, width=width, height=height, center=center)
@@ -227,9 +227,14 @@ def shuffle_parallel_list(list_1, list_2):
     random.shuffle(list_2)
     return list_1, list_2
 
-# base_dir = "F:/IRCAD/3Dircadb1/"
-# slice_path_list, liver_path_list = get_slice_liver_path(base_dir)
-# for i in get_batch(slice_path_list, liver_path_list, batch_size=4, crop=True, center=(150, 245), width=224, height=224):
+
+base_dir = "F:/IRCAD/3Dircadb1/"
+slice_path_list, liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[1, 2, 3, 4])
+print(slice_path_list)
+print(liver_path_list)
+
+# for i in get_batch_crop_center(slice_path_list, liver_path_list, batch_size=4, crop=False, center=(150, 245), width=224,
+#                                height=224):
 #     batch_x = i[0]
 #     batch_y = i[1]
 #     print(batch_x.shape)
