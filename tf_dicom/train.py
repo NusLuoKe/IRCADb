@@ -5,6 +5,7 @@
 # @Author  : NUS_LuoKe
 
 import tensorflow as tf
+import tensorlayer as tl
 
 from tf_dicom import u_net
 from tf_dicom.load_dicom import *
@@ -13,7 +14,8 @@ from tf_dicom.load_dicom import *
 base_dir = "/home/guest/notebooks/datasets/3Dircadb"
 
 gpu_id = "0"
-batch_size = 4
+train_batch_size = 4
+test_batch_size = 20
 length = 512
 width = 512
 channel = 1
@@ -26,7 +28,6 @@ train_slice_path_list, train_liver_path_list = get_slice_liver_path(base_dir, pa
 train_x_with_vessel, train_y_with_vessel, train_vessel_num = filter_useless_data(train_slice_path_list,
                                                                                  train_liver_path_list)
 training_set = [train_x_with_vessel, train_y_with_vessel]
-print("The number of slice with vessel in training set is: %s." % train_vessel_num)
 
 # get validation set from patient_19
 validation_slice_path_list, validation_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[20],
@@ -35,14 +36,12 @@ validation_x_with_vessel, validation_y_with_vessel, validation_vessel_num = filt
     validation_slice_path_list,
     validation_liver_path_list)
 validation_set = [validation_x_with_vessel, validation_y_with_vessel]
-print("The number of slice with vessel in validation set is: %s." % validation_vessel_num)
 
 # get test set from patient_20
 test_slice_path_list, test_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[19], shuffle=True)
 test_x_with_vessel, test_y_with_vessel, test_vessel_num = filter_useless_data(test_slice_path_list,
                                                                               test_liver_path_list)
 test_set = [test_x_with_vessel, test_y_with_vessel]
-print("The number of slice with vessel in test set is: %s." % test_vessel_num)
 
 # default color_dict for label 1-6
 default_color_dict = [
@@ -149,8 +148,8 @@ def train_and_val(gpu_id):
     config.gpu_options.per_process_gpu_memory_fraction = 0.9
 
     # define placeholder
-    x_img = tf.placeholder(tf.float32, shape=[batch_size, length, width, channel])
-    y_true = tf.placeholder(tf.float32, shape=[batch_size, length, width, channel])
+    x_img = tf.placeholder(tf.float32, shape=[None, length, width, channel])
+    y_true = tf.placeholder(tf.float32, shape=[None, length, width, channel])
 
     # 1. Forward propagation
     pred = u_net.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
@@ -179,6 +178,10 @@ def train_and_val(gpu_id):
     init_op = tf.global_variables_initializer()
 
     with tf.Session(config=config) as sess:
+        print("The number of slice with vessel in training set is: %s." % train_vessel_num)
+        print("The number of slice with vessel in validation set is: %s." % validation_vessel_num)
+        print("The number of slice with vessel in test set is: %s." % test_vessel_num)
+
         print("start session...")
         print("The total number of training epoch is: %s " % nb_epoch)
 
@@ -195,12 +198,13 @@ def train_and_val(gpu_id):
             print("EPOCH=%s:" % epoch)
             train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
             val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
-            for train_batch_x_y in get_batch_crop_center(train_slice_path, train_liver_path, batch_size=batch_size,
+            for train_batch_x_y in get_batch_crop_center(train_slice_path, train_liver_path,
+                                                         batch_size=train_batch_size,
                                                          crop_by_center=False):
                 step += 1
                 train_batch_x = train_batch_x_y[0]
                 train_batch_y = train_batch_x_y[1]
-                train_batch_x, train_batch_y = enlarge_slice(train_batch_x, train_batch_y, batch_size=batch_size,
+                train_batch_x, train_batch_y = enlarge_slice(train_batch_x, train_batch_y, batch_size=train_batch_size,
                                                              length=length, width=width)
 
                 _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
@@ -218,12 +222,19 @@ def train_and_val(gpu_id):
                     print('Step %d, train loss = %.8f, train dice = %.8f' % (
                         step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
 
+                    if np.isnan(np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])):
+                        print(np.sum(train_batch_y, axis=(1, 2, 3)))
+                        tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
+                        display = display_batch_segment(train_batch_x, train_batch_y)
+                        tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
+
                 if step % 200 == 0:
-                    for val_batch_x_y in get_batch_crop_center(val_slice_path, val_liver_path, batch_size=batch_size,
+                    for val_batch_x_y in get_batch_crop_center(val_slice_path, val_liver_path,
+                                                               batch_size=train_batch_size,
                                                                crop_by_center=False):
                         val_batch_x = val_batch_x_y[0]
                         val_batch_y = val_batch_x_y[1]
-                        val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y, batch_size=batch_size,
+                        val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y, batch_size=train_batch_size,
                                                                  length=length, width=width)
 
                         val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
@@ -240,7 +251,7 @@ def train_and_val(gpu_id):
             print("begin to test on this epoch")
             test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
             count = 0
-            test_batch_size = 20
+
             for test_batch_x_y in get_batch_crop_center(test_slice_path, test_liver_path, batch_size=test_batch_size,
                                                         crop_by_center=False):
                 count += 1
