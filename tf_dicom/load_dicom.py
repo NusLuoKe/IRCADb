@@ -173,23 +173,23 @@ def enlarge_slice(batch_x, batch_y, batch_size, length=512, width=512):
         for i in range(batch_size):
             slice = batch_y[i]
             slice = np.reshape(slice, (slice.shape[0], slice.shape[1]))
-            slice_props = regionprops(slice)
-            # Centroid coordinate tuple ``(row, col)``
-            centroid = slice_props[0].centroid
+            # slice_props = regionprops(slice)
+            # # Centroid coordinate tuple ``(row, col)``
+            # centroid = slice_props[0].centroid
+            #
+            # max_row = int(centroid[0] + len_row / 2)
+            # min_row = int(centroid[0] - len_row / 2)
+            # min_col = int(centroid[1] - len_col / 2)
+            # max_col = int(centroid[1] + len_col / 2)
+            #
+            # if min_row < 0 or min_col < 0 or max_row > width or max_col > length:
+            #     min_row = box[0]
+            #     min_col = box[1]
+            #     max_row = box[2]
+            #     max_col = box[3]
 
-            max_row = int(centroid[0] + len_row / 2)
-            min_row = int(centroid[0] - len_row / 2)
-            min_col = int(centroid[1] - len_col / 2)
-            max_col = int(centroid[1] + len_col / 2)
-
-            if min_row < 0 or min_col < 0 or max_row > width or max_col > length:
-                min_row = box[0]
-                min_col = box[1]
-                max_row = box[2]
-                max_col = box[3]
-
-            slice = set_square_crop(slice, min_row=min_row, min_col=min_col, max_row=max_row, max_col=max_col)
-            # slice = set_square_crop(slice, min_row=box[0], min_col=box[1], max_row=box[2], max_col=box[3])
+            # slice = set_square_crop(slice, min_row=min_row, min_col=min_col, max_row=max_row, max_col=max_col)
+            slice = set_square_crop(slice, min_row=box[0], min_col=box[1], max_row=box[2], max_col=box[3])
             slice = imresize(slice, (length, width))
             cropped_batch_y.append(slice)
 
@@ -201,8 +201,8 @@ def enlarge_slice(batch_x, batch_y, batch_size, length=512, width=512):
         for i in range(batch_size):
             slice = batch_x[i]
             slice = np.reshape(slice, (slice.shape[0], slice.shape[1]))
-            slice = set_square_crop(slice, min_row=min_row, min_col=min_col, max_row=max_row, max_col=max_col)
-            # slice = set_square_crop(slice, min_row=box[0], min_col=box[1], max_row=box[2], max_col=box[3])
+            # slice = set_square_crop(slice, min_row=min_row, min_col=min_col, max_row=max_row, max_col=max_col)
+            slice = set_square_crop(slice, min_row=box[0], min_col=box[1], max_row=box[2], max_col=box[3])
             slice = imresize(slice, (length, width))
             cropped_batch_x.append(slice)
 

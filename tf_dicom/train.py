@@ -224,7 +224,6 @@ def train_and_val(gpu_id):
                         step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
 
                     if np.isnan(np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])):
-                        print(np.sum(train_batch_y, axis=(1, 2, 3)))
                         tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
                         display = display_batch_segment(train_batch_x, train_batch_y)
                         tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
