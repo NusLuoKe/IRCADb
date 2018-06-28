@@ -24,16 +24,26 @@ nb_epoch = 1000
 train_patient_id_list = list(range(1, 19))
 train_slice_path_list, train_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=train_patient_id_list,
                                                                     shuffle=True)
-training_set = [train_slice_path_list, train_liver_path_list]
+train_x_with_vessel, train_y_with_vessel, train_vessel_num = filter_useless_data(train_slice_path_list,
+                                                                                 train_liver_path_list)
+training_set = [train_x_with_vessel, train_y_with_vessel]
+print("The number of slice with vessel in training set is: %s." % train_vessel_num)
 
 # get validation set from patient_19
-validation_slice_path_list, validation_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[19],
+validation_slice_path_list, validation_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[20],
                                                                               shuffle=True)
-validation_set = [validation_slice_path_list, validation_liver_path_list]
+validation_x_with_vessel, validation_y_with_vessel, validation_vessel_num = filter_useless_data(
+    validation_slice_path_list,
+    validation_liver_path_list)
+validation_set = [validation_x_with_vessel, validation_y_with_vessel]
+print("The number of slice with vessel in validation set is: %s." % validation_vessel_num)
 
 # get test set from patient_20
-test_slice_path_list, test_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[20], shuffle=True)
-test_set = [test_slice_path_list, test_liver_path_list]
+test_slice_path_list, test_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[19], shuffle=True)
+test_x_with_vessel, test_y_with_vessel, test_vessel_num = filter_useless_data(test_slice_path_list,
+                                                                              test_liver_path_list)
+test_set = [test_x_with_vessel, test_y_with_vessel]
+print("The number of slice with vessel in test set is: %s." % test_vessel_num)
 
 # default color_dict for label 1-6
 default_color_dict = [
@@ -61,8 +71,8 @@ def display_segment(image, label, color_dicts=default_color_dict):
 
     Examples
     --------
-    >>> display = display_segment(image, label)
-    >>> display = display_segment(image, label, color_dicts=[{'label':1, 'color':[255,255,255]}])
+    # >>> display = display_segment(image, label)
+    # >>> display = display_segment(image, label, color_dicts=[{'label':1, 'color':[255,255,255]}])
     """
     if image.ndim == 2:
         image = np.repeat(np.expand_dims(image, axis=-1), 3, axis=2)
@@ -91,8 +101,8 @@ def display_batch_segment(images, labels, color_dicts=default_color_dict):
 
     Examples
     --------
-    >>> display = display_segment(images, labels)
-    >>> display = display_segment(images, labels, color_dicts=[{'label':1, 'color':[255,255,255]}])
+    # >>> display = display_segment(images, labels)
+    # >>> display = display_segment(images, labels, color_dicts=[{'label':1, 'color':[255,255,255]}])
     """
     if images.ndim == 3:
         images = np.repeat(np.expand_dims(images, axis=-1), 3, axis=3)
@@ -173,6 +183,11 @@ def train_and_val(gpu_id):
         print("start session...")
         print("The total number of training epoch is: %s " % nb_epoch)
 
+        # define Tensorboard to log the change of loss
+        tf.summary.scalar('loss', loss)
+        merged = tf.summary.merge_all()
+        writer = tf.summary.FileWriter("./vessel_loss/", sess.graph)
+
         # initial  variables
         sess.run(init_op)
 
@@ -195,6 +210,10 @@ def train_and_val(gpu_id):
                 # tl.vis.save_images(train_batch_x, [2, 2], '/home/guest/notebooks/luoke/vis/ori_{}.png'.format(step))
                 # display = display_batch_segment(train_batch_x, train_batch_y)
                 # tl.vis.save_images(display, [2, 2], '/home/guest/notebooks/luoke/vis/seg_{}.png'.format(step))
+
+                if step % 50 == 0:
+                    rs = sess.run(merged, feed_dict={x_img: train_batch_x, y_true: train_batch_y})
+                    writer.add_summary(rs, step)
 
                 if step % 5 == 0:
                     print('Step %d, train loss = %.8f, train dice = %.8f' % (

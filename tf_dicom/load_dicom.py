@@ -46,34 +46,6 @@ def set_center_crop(x, width, height, center, row_index=0, col_index=1):
         return x[bottom_h:top_h, left_w:right_w]
 
 
-def crop(x, width, height, random_crop=False, row_index=0, col_index=1):
-    '''
-    :param x: numpy.array. An image with dimension of [row, col, channel] (default).
-    :param width: Size of width.
-    :param height: Size of height.
-    :param random_crop: boolean, If True, randomly crop, else central crop.
-    :param row_index: index of row.
-    :param col_index: index of col.
-    :return:  numpy.array. A processed image.
-    '''
-
-    h, w = x.shape[row_index], x.shape[col_index]
-
-    if (h <= height) or (w <= width):
-        raise AssertionError("The size of cropping should smaller than the original image")
-
-    if random_crop:
-        h_offset = int(np.random.uniform(0, h - height) - 1)
-        w_offset = int(np.random.uniform(0, w - width) - 1)
-        return x[h_offset:height + h_offset, w_offset:width + w_offset]
-    else:  # central crop
-        h_offset = int(np.floor((h - height) / 2.))
-        w_offset = int(np.floor((w - width) / 2.))
-        h_end = h_offset + height
-        w_end = w_offset + width
-        return x[h_offset:h_end, w_offset:w_end]
-
-
 def get_slice_liver_path(base_dir, patient_id_list=None, shuffle=True):
     slice_path_list = []  # 将所有图片的文件名的路径存成slice_path_list
     liver_path_list = []  # 将所有图片中liver的mask的文件名的路径存成liver_path_list
@@ -103,6 +75,21 @@ def get_slice_liver_path(base_dir, patient_id_list=None, shuffle=True):
             random.shuffle(liver_path_list)
 
     return slice_path_list, liver_path_list
+
+
+def filter_useless_data(slice_path_list, liver_path_list):
+    x_with_vessel = []
+    y_with_vessel = []
+    vessel_num = 0
+    for image_path in liver_path_list:
+        image_file = pydicom.dcmread(image_path)
+        image_array = image_file.pixel_array
+        if np.sum(image_array) != 0:
+            vessel_num += 1
+            idx = liver_path_list.index(image_path)
+            y_with_vessel.append(image_path)
+            x_with_vessel.append(slice_path_list[idx])
+    return x_with_vessel, y_with_vessel, vessel_num
 
 
 def get_batch_crop_center(slice_path, liver_path, batch_size, crop_by_center=False, center=None, height=None,
@@ -137,7 +124,7 @@ def get_batch_crop_center(slice_path, liver_path, batch_size, crop_by_center=Fal
             image_array[image_array > 1024] = 1024
             image_array = (image_array + 1024.) / 2048.
 
-            if crop_by_center == True:
+            if crop_by_center:
                 image_array = set_center_crop(x=image_array, width=width, height=height, center=center)
             batch_x.append(image_array)
 
@@ -147,7 +134,7 @@ def get_batch_crop_center(slice_path, liver_path, batch_size, crop_by_center=Fal
             image_array = image_file.pixel_array
             image_array[image_array == 255] = 1
 
-            if crop_by_center == True:
+            if crop_by_center:
                 image_array = set_center_crop(x=image_array, width=width, height=height, center=center)
             batch_y.append(image_array)
 
@@ -226,16 +213,3 @@ def shuffle_parallel_list(list_1, list_2):
     random.seed(rand_num)
     random.shuffle(list_2)
     return list_1, list_2
-
-
-base_dir = "F:/IRCAD/3Dircadb1/"
-slice_path_list, liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[1, 2, 3, 4])
-print(slice_path_list)
-print(liver_path_list)
-
-# for i in get_batch_crop_center(slice_path_list, liver_path_list, batch_size=4, crop=False, center=(150, 245), width=224,
-#                                height=224):
-#     batch_x = i[0]
-#     batch_y = i[1]
-#     print(batch_x.shape)
-#     break
