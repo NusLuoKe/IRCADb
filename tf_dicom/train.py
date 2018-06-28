@@ -181,6 +181,7 @@ def train_and_val(gpu_id):
         print("The number of slice with vessel in training set is: %s." % train_vessel_num)
         print("The number of slice with vessel in validation set is: %s." % validation_vessel_num)
         print("The number of slice with vessel in test set is: %s." % test_vessel_num)
+        print("#"*30)
 
         print("start session...")
         print("The total number of training epoch is: %s " % nb_epoch)
@@ -243,7 +244,7 @@ def train_and_val(gpu_id):
                             step, val_loss, np.mean(val_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
                         print("\n")
                         break
-            if epoch % 5 == 0:
+            if epoch % 40 == 0:
                 saver.save(sess, './Model_Weights/model.ckpt', global_step=epoch)
                 print("Saved a check point...")
 
