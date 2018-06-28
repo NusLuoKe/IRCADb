@@ -11,6 +11,8 @@ from tensorlayer.layers import *
 
 from tensorlayer.layers import *
 
+is_train = True
+
 
 def u_net(x, reuse=False, n_out=1):
     _, nx, ny, nz = x.get_shape().as_list()

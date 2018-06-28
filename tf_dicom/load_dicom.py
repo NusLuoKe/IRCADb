@@ -84,7 +84,7 @@ def filter_useless_data(slice_path_list, liver_path_list):
     for image_path in liver_path_list:
         image_file = pydicom.dcmread(image_path)
         image_array = image_file.pixel_array
-        if np.sum(image_array) != 0:
+        if np.sum(image_array) > 0:
             vessel_num += 1
             idx = liver_path_list.index(image_path)
             y_with_vessel.append(image_path)

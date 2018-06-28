@@ -11,7 +11,6 @@ from tf_dicom.load_dicom import *
 
 # base_dir = "F:/IRCAD/3Dircadb1/"
 base_dir = "/home/guest/notebooks/datasets/3Dircadb"
-checkpoint_dir = "/home/guest/notebooks/luoke/Model_Weights"
 
 gpu_id = "0"
 batch_size = 4
@@ -233,31 +232,32 @@ def train_and_val(gpu_id):
                             step, val_loss, np.mean(val_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
                         print("\n")
                         break
-            if step % 5000 == 0:
-                saver.save(sess, checkpoint_dir + 'model.ckpt', global_step=step)
+            if epoch % 5 == 0:
+                saver.save(sess, './Model_Weights/model.ckpt', global_step=epoch)
+                print("Saved a check point...")
 
-        print("finished training")
-        print("begin to test...")
-        test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
-        count = 0
-        test_batch_size = 20
-        for test_batch_x_y in get_batch_crop_center(test_slice_path, test_liver_path, batch_size=test_batch_size,
-                                                    crop_by_center=False):
-            count += 1
-            test_batch_x = test_batch_x_y[0]
-            test_batch_y = test_batch_x_y[1]
-            test_batch_x, test_batch_y = enlarge_slice(test_batch_x, test_batch_y, batch_size=test_batch_size,
-                                                       length=length, width=width)
-            test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
-                                                     feed_dict={x_img: test_batch_x, y_true: test_batch_y})
-            print('test loss = %.8f, test dice = %.8f' % (
-                test_loss, np.mean(test_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
-            print("\n")
-            if count == 5:
-                break
+            print("finished training for one epoch")
+            print("begin to test on this epoch")
+            test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
+            count = 0
+            test_batch_size = 20
+            for test_batch_x_y in get_batch_crop_center(test_slice_path, test_liver_path, batch_size=test_batch_size,
+                                                        crop_by_center=False):
+                count += 1
+                test_batch_x = test_batch_x_y[0]
+                test_batch_y = test_batch_x_y[1]
+                test_batch_x, test_batch_y = enlarge_slice(test_batch_x, test_batch_y, batch_size=test_batch_size,
+                                                           length=length, width=width)
+                test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
+                                                         feed_dict={x_img: test_batch_x, y_true: test_batch_y})
+                print('test loss = %.8f, test dice = %.8f' % (
+                    test_loss, np.mean(test_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
+                print("\n")
+                if count == 5:
+                    break
 
-        print("*" * 30)
-        print("*" * 30)
+            print("*" * 30)
+            print("*" * 30)
 
 
 if __name__ == '__main__':
