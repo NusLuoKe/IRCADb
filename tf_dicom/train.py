@@ -198,9 +198,9 @@ def train_and_val(gpu_id):
             print("EPOCH=%s:" % epoch)
             train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
             val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
-            for train_batch_x_y in get_batch_crop_center(train_slice_path, train_liver_path,
-                                                         batch_size=train_batch_size,
-                                                         crop_by_center=False):
+            for train_batch_x_y in get_batch(train_slice_path, train_liver_path,
+                                             batch_size=train_batch_size,
+                                             crop_by_center=False):
                 step += 1
                 train_batch_x = train_batch_x_y[0]
                 train_batch_y = train_batch_x_y[1]
@@ -228,9 +228,9 @@ def train_and_val(gpu_id):
                     #     tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
 
                 if step % 200 == 0:
-                    for val_batch_x_y in get_batch_crop_center(val_slice_path, val_liver_path,
-                                                               batch_size=train_batch_size,
-                                                               crop_by_center=False):
+                    for val_batch_x_y in get_batch(val_slice_path, val_liver_path,
+                                                   batch_size=train_batch_size,
+                                                   crop_by_center=False):
                         val_batch_x = val_batch_x_y[0]
                         val_batch_y = val_batch_x_y[1]
                         val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y, batch_size=train_batch_size,
@@ -251,8 +251,8 @@ def train_and_val(gpu_id):
             test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
             count = 0
 
-            for test_batch_x_y in get_batch_crop_center(test_slice_path, test_liver_path, batch_size=test_batch_size,
-                                                        crop_by_center=False):
+            for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=test_batch_size,
+                                            crop_by_center=False):
                 count += 1
                 test_batch_x = test_batch_x_y[0]
                 test_batch_y = test_batch_x_y[1]

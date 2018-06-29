@@ -92,8 +92,8 @@ def filter_useless_data(slice_path_list, mask_path_list):
     return x_with_mask, y_with_mask, mask_num
 
 
-def get_batch_crop_center(slice_path, mask_path, batch_size, crop_by_center=False, center=None, height=None,
-                          width=None):
+def get_batch(slice_path, mask_path, batch_size, crop_by_center=False, center=None, height=None,
+              width=None):
     batch_num = int(math.ceil(len(slice_path) / batch_size))
 
     for i in range(1, batch_num):
@@ -165,30 +165,12 @@ def enlarge_slice(batch_x, batch_y, batch_size, length=512, width=512):
         props = regionprops(largest_mask_slice)
         # Bounding box ``(min_row, min_col, max_row, max_col)
         box = props[0].bbox
-        len_row = box[2] - box[0]
-        len_col = box[3] - box[1]
 
         # apply the box to all slices in the batch
         cropped_batch_y = []
         for i in range(batch_size):
             slice = batch_y[i]
             slice = np.reshape(slice, (slice.shape[0], slice.shape[1]))
-            # slice_props = regionprops(slice)
-            # # Centroid coordinate tuple ``(row, col)``
-            # centroid = slice_props[0].centroid
-            #
-            # max_row = int(centroid[0] + len_row / 2)
-            # min_row = int(centroid[0] - len_row / 2)
-            # min_col = int(centroid[1] - len_col / 2)
-            # max_col = int(centroid[1] + len_col / 2)
-            #
-            # if min_row < 0 or min_col < 0 or max_row > width or max_col > length:
-            #     min_row = box[0]
-            #     min_col = box[1]
-            #     max_row = box[2]
-            #     max_col = box[3]
-
-            # slice = set_square_crop(slice, min_row=min_row, min_col=min_col, max_row=max_row, max_col=max_col)
             slice = set_square_crop(slice, min_row=box[0], min_col=box[1], max_row=box[2], max_col=box[3])
             slice = imresize(slice, (length, width))
             cropped_batch_y.append(slice)
@@ -201,7 +183,6 @@ def enlarge_slice(batch_x, batch_y, batch_size, length=512, width=512):
         for i in range(batch_size):
             slice = batch_x[i]
             slice = np.reshape(slice, (slice.shape[0], slice.shape[1]))
-            # slice = set_square_crop(slice, min_row=min_row, min_col=min_col, max_row=max_row, max_col=max_col)
             slice = set_square_crop(slice, min_row=box[0], min_col=box[1], max_row=box[2], max_col=box[3])
             slice = imresize(slice, (length, width))
             cropped_batch_x.append(slice)
@@ -234,15 +215,3 @@ def shuffle_parallel_list(list_1, list_2):
     random.shuffle(list_2)
     return list_1, list_2
 
-#
-# base_dir = "F:/IRCAD/3Dircadb1/"
-# train_patient_id_list = list(range(1, 20))
-# train_slice_path_list, train_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=train_patient_id_list,
-#                                                                     shuffle=True)
-# train_x_with_vessel, train_y_with_vessel, train_vessel_num = filter_useless_data(train_slice_path_list,
-#                                                                                  train_liver_path_list)
-#
-# for image_path in train_y_with_vessel:
-#     image_file = pydicom.dcmread(image_path)
-#     image_array = image_file.pixel_array
-#     print(np.sum(image_array))
