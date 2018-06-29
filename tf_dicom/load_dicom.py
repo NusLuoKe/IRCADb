@@ -77,42 +77,42 @@ def get_slice_liver_path(base_dir, patient_id_list=None, shuffle=True):
     return slice_path_list, liver_path_list
 
 
-def filter_useless_data(slice_path_list, liver_path_list):
-    x_with_vessel = []
-    y_with_vessel = []
-    vessel_num = 0
-    for image_path in liver_path_list:
+def filter_useless_data(slice_path_list, mask_path_list):
+    x_with_mask = []
+    y_with_mask = []
+    mask_num = 0
+    for image_path in mask_path_list:
         image_file = pydicom.dcmread(image_path)
         image_array = image_file.pixel_array
         if np.sum(image_array) > 0:
-            vessel_num += 1
-            idx = liver_path_list.index(image_path)
-            y_with_vessel.append(image_path)
-            x_with_vessel.append(slice_path_list[idx])
-    return x_with_vessel, y_with_vessel, vessel_num
+            mask_num += 1
+            idx = mask_path_list.index(image_path)
+            y_with_mask.append(image_path)
+            x_with_mask.append(slice_path_list[idx])
+    return x_with_mask, y_with_mask, mask_num
 
 
-def get_batch_crop_center(slice_path, liver_path, batch_size, crop_by_center=False, center=None, height=None,
+def get_batch_crop_center(slice_path, mask_path, batch_size, crop_by_center=False, center=None, height=None,
                           width=None):
     batch_num = int(math.ceil(len(slice_path) / batch_size))
 
     for i in range(1, batch_num):
         if (batch_size * batch_num) == len(slice_path):
             slice_batch = slice_path[batch_size * (i - 1):batch_size * i]
-            liver_batch = liver_path[batch_size * (i - 1):batch_size * i]
+            liver_batch = mask_path[batch_size * (i - 1):batch_size * i]
 
         elif (batch_size * batch_num) != len(slice_path):
             if i < batch_num:
                 slice_batch = slice_path[batch_size * (i - 1):batch_size * i]
-                liver_batch = liver_path[batch_size * (i - 1):batch_size * i]
+                liver_batch = mask_path[batch_size * (i - 1):batch_size * i]
             else:
                 slice_batch = slice_path[batch_size * (i - 1):len(slice_path)]
-                liver_batch = liver_path[batch_size * (i - 1):len(liver_path)]
+                liver_batch = mask_path[batch_size * (i - 1):len(mask_path)]
 
                 append_num = (batch_size * batch_num) - len(slice_path)
                 for j in range(append_num):
                     slice_batch.append(slice_path[j])
-                    liver_batch.append(liver_path[j])
+                    liver_batch.append(mask_path[j])
 
         ######################################################################
         # slice_batch是一个batch，[[文件名],[文件名],[文件名]]

@@ -33,8 +33,7 @@ training_set = [train_x_with_vessel, train_y_with_vessel]
 validation_slice_path_list, validation_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[20],
                                                                               shuffle=True)
 validation_x_with_vessel, validation_y_with_vessel, validation_vessel_num = filter_useless_data(
-    validation_slice_path_list,
-    validation_liver_path_list)
+    validation_slice_path_list, validation_liver_path_list)
 validation_set = [validation_x_with_vessel, validation_y_with_vessel]
 
 # get test set from patient_20
@@ -168,8 +167,8 @@ def train_and_val(gpu_id):
 
     # 4. optimizer
     learning_rate = 1e-4
-    train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-    # train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+    # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
+    train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
 
     # saver
     saver = tf.train.Saver()
@@ -181,7 +180,7 @@ def train_and_val(gpu_id):
         print("The number of slice with vessel in training set is: %s." % train_vessel_num)
         print("The number of slice with vessel in validation set is: %s." % validation_vessel_num)
         print("The number of slice with vessel in test set is: %s." % test_vessel_num)
-        print("#"*30)
+        print("#" * 30)
 
         print("start session...")
         print("The total number of training epoch is: %s " % nb_epoch)
@@ -211,9 +210,9 @@ def train_and_val(gpu_id):
                 _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
                                                               feed_dict={x_img: train_batch_x, y_true: train_batch_y})
 
-                # tl.vis.save_images(train_batch_x, [2, 2], '/home/guest/notebooks/luoke/vis/ori_{}.png'.format(step))
+                # tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
                 # display = display_batch_segment(train_batch_x, train_batch_y)
-                # tl.vis.save_images(display, [2, 2], '/home/guest/notebooks/luoke/vis/seg_{}.png'.format(step))
+                # tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
 
                 if step % 50 == 0:
                     rs = sess.run(merged, feed_dict={x_img: train_batch_x, y_true: train_batch_y})
@@ -223,10 +222,10 @@ def train_and_val(gpu_id):
                     print('Step %d, train loss = %.8f, train dice = %.8f' % (
                         step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
 
-                    if np.isnan(np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])):
-                        tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
-                        display = display_batch_segment(train_batch_x, train_batch_y)
-                        tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
+                    # if np.isnan(np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])):
+                    #     tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
+                    #     display = display_batch_segment(train_batch_x, train_batch_y)
+                    #     tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
 
                 if step % 200 == 0:
                     for val_batch_x_y in get_batch_crop_center(val_slice_path, val_liver_path,
