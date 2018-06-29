@@ -140,7 +140,7 @@ def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
     return hard_dice
 
 
-def train_and_val(gpu_id):
+def train_and_val(gpu_id="0"):
     # GPU limit
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     config = tf.ConfigProto(allow_soft_placement=True)
@@ -152,7 +152,7 @@ def train_and_val(gpu_id):
 
     # 1. Forward propagation
     pred = u_net.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
-    y_pred = pred.outputs  # (4, 512, 512, 1)
+    y_pred = pred.outputs  # (batch_size, 512, 512, 1)
 
     # 2. loss
     loss_ce = tf.reduce_mean(
@@ -163,6 +163,7 @@ def train_and_val(gpu_id):
 
     # 3. dice
     sig_y_pred = tf.sigmoid(y_pred)
+
     dice = dice_hard_coe(sig_y_pred, y_true, threshold=0.5)
 
     # 4. optimizer
@@ -220,7 +221,7 @@ def train_and_val(gpu_id):
 
                 if step % 5 == 0:
                     print('Step %d, train loss = %.8f, train dice = %.8f' % (
-                        step, train_loss, np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
+                        step, train_loss, np.mean(train_dice[np.sum(train_batch_y, axis=(1, 2, 3)) > 0])))
 
                     # if np.isnan(np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])):
                     #     tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
@@ -239,7 +240,7 @@ def train_and_val(gpu_id):
                         val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
                                                                feed_dict={x_img: val_batch_x, y_true: val_batch_y})
                         print('Step %d, validation loss = %.8f, validation dice = %.8f' % (
-                            step, val_loss, np.mean(val_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
+                            step, val_loss, np.mean(val_dice[np.sum(val_batch_y, axis=(1, 2, 3)) > 0])))
                         print("\n")
                         break
             if epoch % 40 == 0:
@@ -261,7 +262,7 @@ def train_and_val(gpu_id):
                 test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
                                                          feed_dict={x_img: test_batch_x, y_true: test_batch_y})
                 print('test loss = %.8f, test dice = %.8f' % (
-                    test_loss, np.mean(test_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])))
+                    test_loss, np.mean(test_dice[np.sum(test_batch_y, axis=(1, 2, 3)) > 0])))
                 print("\n")
                 if count == 5:
                     break

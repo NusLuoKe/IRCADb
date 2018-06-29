@@ -17,9 +17,17 @@ from skimage.measure import regionprops
 def set_square_crop(x, min_row, min_col, max_row, max_col):
     # return x[min_row:max_row, min_col:max_col]
     if max_row - min_row > max_col - min_col:
-        return x[min_row:max_row, min_row:max_row]
+        gap = max_row - min_row
+        try:
+            return x[min_row:max_row, min_col:min_col+gap]
+        except:
+            return x[min_row:max_row, max_col - gap:max_col]
     else:
-        return x[min_col:max_col, min_col:max_col]
+        gap = max_col - min_col
+        try:
+            return x[min_row:min_row+gap, min_col:min_col]
+        except:
+            return x[max_row - gap:max_row, min_col:max_col]
 
 
 def set_center_crop(x, width, height, center, row_index=0, col_index=1):
@@ -132,7 +140,7 @@ def get_batch(slice_path, mask_path, batch_size, crop_by_center=False, center=No
         for image_path in liver_batch:
             image_file = pydicom.dcmread(image_path)
             image_array = image_file.pixel_array
-            image_array[image_array == 255] = 1
+            image_array[image_array > 0] = 1
 
             if crop_by_center:
                 image_array = set_center_crop(x=image_array, width=width, height=height, center=center)
@@ -214,4 +222,5 @@ def shuffle_parallel_list(list_1, list_2):
     random.seed(rand_num)
     random.shuffle(list_2)
     return list_1, list_2
+
 
