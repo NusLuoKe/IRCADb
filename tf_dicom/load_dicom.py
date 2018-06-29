@@ -18,16 +18,12 @@ def set_square_crop(x, min_row, min_col, max_row, max_col):
     # return x[min_row:max_row, min_col:max_col]
     if max_row - min_row > max_col - min_col:
         gap = max_row - min_row
-        try:
-            return x[min_row:max_row, min_col:min_col+gap]
-        except:
-            return x[min_row:max_row, max_col - gap:max_col]
+        col = min_col if min_col + gap < x.shape[1] else x.shape[1] - gap
+        return x[min_row:max_row, col:col + gap]
     else:
         gap = max_col - min_col
-        try:
-            return x[min_row:min_row+gap, min_col:min_col]
-        except:
-            return x[max_row - gap:max_row, min_col:max_col]
+        row = min_row if min_row + gap < x.shape[0] else x.shape[0] - gap
+        return x[row:row + gap, min_col:max_col]
 
 
 def set_center_crop(x, width, height, center, row_index=0, col_index=1):
@@ -222,5 +218,3 @@ def shuffle_parallel_list(list_1, list_2):
     random.seed(rand_num)
     random.shuffle(list_2)
     return list_1, list_2
-
-
