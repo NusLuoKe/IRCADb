@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2018/6/12 19:51
-# @File    : train.py
+# @Time    : 2018/7/2 10:03
+# @File    : test_dice.py
 # @Author  : NUS_LuoKe
 
 import tensorflow as tf
@@ -19,7 +19,6 @@ test_batch_size = 20
 length = 512
 width = 512
 channel = 1
-nb_epoch = 1000
 
 # get training set from patient_1 to patient_18
 train_patient_id_list = list(range(1, 19))
@@ -140,7 +139,7 @@ def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
     return hard_dice
 
 
-def train_and_val(gpu_id="0"):
+def test_dice(gpu_id="0"):
     # GPU limit
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     config = tf.ConfigProto(allow_soft_placement=True)
@@ -170,112 +169,81 @@ def train_and_val(gpu_id="0"):
     # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
     train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
 
-    # saver
-    saver = tf.train.Saver()
-
     # define init_op
     init_op = tf.global_variables_initializer()
 
     with tf.Session(config=config) as sess:
-        print("The number of slice with vessel in training set is: %s." % train_vessel_num)
-        print("The number of slice with vessel in validation set is: %s." % validation_vessel_num)
-        print("The number of slice with vessel in test set is: %s." % test_vessel_num)
         print("#" * 30)
-
-        print("start session...")
-        print("The total number of training epoch is: %s " % nb_epoch)
-
-        # define Tensorboard to log the change of loss
-        tf.summary.scalar('loss', loss)
-        merged = tf.summary.merge_all()
-        writer = tf.summary.FileWriter("./vessel_loss/", sess.graph)
 
         # initial  variables
         sess.run(init_op)
 
-        # # restore
-        # ckpt_path = "./Model_Weights/"
-        # saver = tf.train.import_meta_graph(os.path.join(ckpt_path, "model.ckpt-480.meta"))
-        # saver.restore(sess, tf.train.latest_checkpoint(ckpt_path))
-        # print("load checkpoint successfully...!")
+        # restore
+        ckpt_path = "./Model_Weights/"
+        saver = tf.train.import_meta_graph(os.path.join(ckpt_path, "model.ckpt-480.meta"))
+        saver.restore(sess, tf.train.latest_checkpoint(ckpt_path))
+        print("load checkpoint successfully...!")
+        print("Begin to test the model performance...!")
 
-        step = 0
-        for epoch in range(nb_epoch):
-            print("EPOCH=%s:" % epoch)
-            train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
-            val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
-            for train_batch_x_y in get_batch(train_slice_path, train_liver_path,
-                                             batch_size=train_batch_size,
-                                             crop_by_center=False):
-                step += 1
-                train_batch_x = train_batch_x_y[0]
-                train_batch_y = train_batch_x_y[1]
-                train_batch_x, train_batch_y = enlarge_slice(train_batch_x, train_batch_y, batch_size=train_batch_size,
-                                                             length=length, width=width)
+        count_train = 0
+        train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
+        val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
+        for train_batch_x_y in get_batch(train_slice_path, train_liver_path,
+                                         batch_size=train_batch_size,
+                                         crop_by_center=False):
+            train_batch_x = train_batch_x_y[0]
+            train_batch_y = train_batch_x_y[1]
+            train_batch_x, train_batch_y = enlarge_slice(train_batch_x, train_batch_y, batch_size=train_batch_size,
+                                                         length=length, width=width)
 
-                _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
-                                                              feed_dict={x_img: train_batch_x, y_true: train_batch_y})
+            _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
+                                                          feed_dict={x_img: train_batch_x, y_true: train_batch_y})
+            print("train loss = %.8f, train dice = %.8f' " % (
+                train_loss, np.mean(train_dice[np.sum(train_batch_y, axis=(1, 2, 3)) > 0])))
+            count_train += 1
+            if count_train == 3:
+                break
 
-                # tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
-                # display = display_batch_segment(train_batch_x, train_batch_y)
-                # tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
+        print("\n")
+        count_val = 0
+        for val_batch_x_y in get_batch(val_slice_path, val_liver_path,
+                                       batch_size=train_batch_size,
+                                       crop_by_center=False):
+            val_batch_x = val_batch_x_y[0]
+            val_batch_y = val_batch_x_y[1]
+            val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y, batch_size=train_batch_size,
+                                                     length=length, width=width)
 
-                if step % 50 == 0:
-                    rs = sess.run(merged, feed_dict={x_img: train_batch_x, y_true: train_batch_y})
-                    writer.add_summary(rs, step)
+            val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
+                                                   feed_dict={x_img: val_batch_x, y_true: val_batch_y})
+            print("validation loss = %.8f, validation dice = %.8f' " % (
+                val_loss, np.mean(val_dice[np.sum(val_batch_y, axis=(1, 2, 3)) > 0])))
+            count_val += 1
+            if count_val == 3:
+                break
 
-                if step % 5 == 0:
-                    print('Step %d, train loss = %.8f, train dice = %.8f' % (
-                        step, train_loss, np.mean(train_dice[np.sum(train_batch_y, axis=(1, 2, 3)) > 0])))
+        print("\n")
+        test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
+        count_test = 0
+        for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=test_batch_size,
+                                        crop_by_center=False):
 
-                    # if np.isnan(np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])):
-                    #     tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
-                    #     display = display_batch_segment(train_batch_x, train_batch_y)
-                    #     tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
+            test_batch_x = test_batch_x_y[0]
+            test_batch_y = test_batch_x_y[1]
+            test_batch_x, test_batch_y = enlarge_slice(test_batch_x, test_batch_y, batch_size=test_batch_size,
+                                                       length=length, width=width)
+            test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
+                                                     feed_dict={x_img: test_batch_x, y_true: test_batch_y})
+            print('test loss = %.8f, test dice = %.8f' % (
+                test_loss, np.mean(test_dice[np.sum(test_batch_y, axis=(1, 2, 3)) > 0])))
+            print("\n")
+            count_test += 1
+            if count_test == 3:
+                break
 
-                if step % 200 == 0:
-                    for val_batch_x_y in get_batch(val_slice_path, val_liver_path,
-                                                   batch_size=train_batch_size,
-                                                   crop_by_center=False):
-                        val_batch_x = val_batch_x_y[0]
-                        val_batch_y = val_batch_x_y[1]
-                        val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y, batch_size=train_batch_size,
-                                                                 length=length, width=width)
-
-                        val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
-                                                               feed_dict={x_img: val_batch_x, y_true: val_batch_y})
-                        print('Step %d, validation loss = %.8f, validation dice = %.8f' % (
-                            step, val_loss, np.mean(val_dice[np.sum(val_batch_y, axis=(1, 2, 3)) > 0])))
-                        print("\n")
-                        break
-
-            if epoch % 40 == 0:
-                saver.save(sess, './Model_Weights/model.ckpt', global_step=epoch)
-                print("Saved a check point...")
-
-            print("finished training for one epoch")
-            print("begin to test on this epoch")
-            test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
-            count = 0
-
-            for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=test_batch_size,
-                                            crop_by_center=False):
-                count += 1
-                test_batch_x = test_batch_x_y[0]
-                test_batch_y = test_batch_x_y[1]
-                test_batch_x, test_batch_y = enlarge_slice(test_batch_x, test_batch_y, batch_size=test_batch_size,
-                                                           length=length, width=width)
-                test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
-                                                         feed_dict={x_img: test_batch_x, y_true: test_batch_y})
-                print('test loss = %.8f, test dice = %.8f' % (
-                    test_loss, np.mean(test_dice[np.sum(test_batch_y, axis=(1, 2, 3)) > 0])))
-                print("\n")
-                if count == 5:
-                    break
-
-            print("*" * 30)
-            print("*" * 30)
+    print("*" * 30)
+    print("*" * 30)
 
 
 if __name__ == '__main__':
-    train_and_val(gpu_id)
+    test_dice(gpu_id)
