@@ -22,21 +22,21 @@ channel = 1
 
 # get training set from patient_1 to patient_18
 train_patient_id_list = list(range(1, 19))
-train_slice_path_list, train_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=train_patient_id_list,
-                                                                    shuffle=True)
+train_slice_path_list, train_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=train_patient_id_list,
+                                                                   shuffle=True)
 train_x_with_vessel, train_y_with_vessel, train_vessel_num = filter_useless_data(train_slice_path_list,
                                                                                  train_liver_path_list)
 training_set = [train_x_with_vessel, train_y_with_vessel]
 
 # get validation set from patient_19
-validation_slice_path_list, validation_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[20],
-                                                                              shuffle=True)
+validation_slice_path_list, validation_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=[20],
+                                                                             shuffle=True)
 validation_x_with_vessel, validation_y_with_vessel, validation_vessel_num = filter_useless_data(
     validation_slice_path_list, validation_liver_path_list)
 validation_set = [validation_x_with_vessel, validation_y_with_vessel]
 
 # get test set from patient_20
-test_slice_path_list, test_liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[19], shuffle=True)
+test_slice_path_list, test_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=[19], shuffle=True)
 test_x_with_vessel, test_y_with_vessel, test_vessel_num = filter_useless_data(test_slice_path_list,
                                                                               test_liver_path_list)
 test_set = [test_x_with_vessel, test_y_with_vessel]
@@ -193,8 +193,8 @@ def test_dice(gpu_id="0"):
                                          crop_by_center=False):
             train_batch_x = train_batch_x_y[0]
             train_batch_y = train_batch_x_y[1]
-            train_batch_x, train_batch_y = enlarge_slice(train_batch_x, train_batch_y, batch_size=train_batch_size,
-                                                         length=length, width=width)
+            train_batch_x, train_batch_y = resize_batch(train_batch_x, train_batch_y, batch_size=train_batch_size,
+                                                        length=length, width=width)
 
             _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
                                                           feed_dict={x_img: train_batch_x, y_true: train_batch_y})
@@ -211,8 +211,8 @@ def test_dice(gpu_id="0"):
                                        crop_by_center=False):
             val_batch_x = val_batch_x_y[0]
             val_batch_y = val_batch_x_y[1]
-            val_batch_x, val_batch_y = enlarge_slice(val_batch_x, val_batch_y, batch_size=train_batch_size,
-                                                     length=length, width=width)
+            val_batch_x, val_batch_y = resize_batch(val_batch_x, val_batch_y, batch_size=train_batch_size,
+                                                    length=length, width=width)
 
             val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
                                                    feed_dict={x_img: val_batch_x, y_true: val_batch_y})
@@ -230,8 +230,8 @@ def test_dice(gpu_id="0"):
 
             test_batch_x = test_batch_x_y[0]
             test_batch_y = test_batch_x_y[1]
-            test_batch_x, test_batch_y = enlarge_slice(test_batch_x, test_batch_y, batch_size=test_batch_size,
-                                                       length=length, width=width)
+            test_batch_x, test_batch_y = resize_batch(test_batch_x, test_batch_y, batch_size=test_batch_size,
+                                                      length=length, width=width)
             test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
                                                      feed_dict={x_img: test_batch_x, y_true: test_batch_y})
             print('test loss = %.8f, test dice = %.8f' % (

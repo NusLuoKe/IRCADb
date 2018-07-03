@@ -51,6 +51,7 @@ plt.imshow(image_array)
 plt.show()
 '''
 
+'''
 # 根据标签的范围裁剪图片
 import matplotlib.pyplot as plt
 from tf_dicom.load_dicom import *
@@ -59,9 +60,13 @@ from tf_dicom.load_dicom import *
 def set_square_crop(x, min_row, min_col, max_row, max_col):
     # return x[min_row:max_row, min_col:max_col]
     if max_row - min_row > max_col - min_col:
-        return x[min_row:max_row, min_row:max_row]
+        gap = max_row - min_row
+        col = min_col if min_col + gap < x.shape[1] else x.shape[1] - gap
+        return x[min_row:max_row, col:col + gap]
     else:
-        return x[min_col:max_col, min_col:max_col]
+        gap = max_col - min_col
+        row = min_row if min_row + gap < x.shape[0] else x.shape[0] - gap
+        return x[row:row + gap, min_col:max_col]
 
 
 length = 512
@@ -69,7 +74,9 @@ width = 512
 base_dir = "F:/IRCAD/3Dircadb1/"
 batch_size = 4
 slice_path_list, liver_path_list = get_slice_liver_path(base_dir, patient_id_list=[1, 2])
-for i in get_batch_crop_center(slice_path_list, liver_path_list, batch_size=batch_size, crop_by_center=False):
+slice_path_list, liver_path_list, vessel_num = filter_useless_data(slice_path_list, liver_path_list)
+
+for i in get_batch(slice_path_list, liver_path_list, batch_size=batch_size, crop_by_center=False):
     batch_x = i[0]
     batch_y = i[1]
 
@@ -77,8 +84,6 @@ for i in get_batch_crop_center(slice_path_list, liver_path_list, batch_size=batc
         # find the box to crop slices
         largest_mask_slice = batch_y[np.argmax(np.sum(batch_y, axis=(1, 2, 3)))]
         largest_mask_slice = np.reshape(largest_mask_slice, (largest_mask_slice.shape[0], largest_mask_slice.shape[1]))
-        plt.imshow(largest_mask_slice)
-        plt.show()
 
         props = regionprops(largest_mask_slice)
         box = list(props[0].bbox)
@@ -125,5 +130,8 @@ for i in get_batch_crop_center(slice_path_list, liver_path_list, batch_size=batc
     else:
         # if the mask of every slice in the batch is empty, then do not processing the original image
         pass
-
     break
+
+'''
+
+
