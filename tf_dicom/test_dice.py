@@ -166,7 +166,6 @@ def prediction(gpu_id="0"):
         print("load checkpoint successfully...!")
         print("start to make prediction...")
 
-        count = 0
         for test_slice_path in test_slice_path_list:
             slice = pydicom.read_file(test_slice_path)
             test_batch_x = slice.pixel_array.reshape((1, slice.pixel_array.shape[0], slice.pixel_array.shape[1], 1))
@@ -180,7 +179,7 @@ def prediction(gpu_id="0"):
             sig_y_pred_[sig_y_pred_ > 0.5] = 1
             sig_y_pred_[sig_y_pred_ < 0.5] = 0
             if save_test_result:
-                test_image_path = test_slice_path_list[count]
+                test_image_path = test_slice_path_list[idx]
                 image = pydicom.read_file(test_image_path)
                 image.pixel_array.flat = np.int16(sig_y_pred_[0].reshape(y_pred[0].shape[0], y_pred[0].shape[1]))
                 image.PixelData = image.pixel_array.tostring()
@@ -188,11 +187,10 @@ def prediction(gpu_id="0"):
                 if not os.path.isdir(save_dir):
                     os.mkdir(save_dir)
                 image.save_as(
-                    os.path.join(save_dir, "image_{}".format(os.path.basename(test_slice_path_list[count]).split("_")[1])))
+                    os.path.join(save_dir, "image_{}".format(os.path.basename(test_slice_path_list[idx]).split("_")[1])))
                 print('test loss = %.8f, test dice = %.8f' % (
                     test_loss, np.mean(test_dice[np.sum(test_batch_y, axis=(1, 2, 3)) > 0])),
-                      "image_{}".format(os.path.basename(test_slice_path_list[count]).split("_")[1]), count)
-                count += 1
+                      "image_{}".format(os.path.basename(test_slice_path_list[idx]).split("_")[1]), idx)
 
     print("*" * 30)
     print("*" * 30)
