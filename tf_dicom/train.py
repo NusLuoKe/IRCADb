@@ -23,23 +23,23 @@ nb_epoch = 1000
 
 # get training set from patient_1 to patient_18
 train_patient_id_list = list(range(1, 19))
-train_slice_path_list, train_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=train_patient_id_list,
-                                                                   shuffle=True)
+train_slice_path_list, train_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=train_patient_id_list,
+                                                                  shuffle=True)
 train_x_with_vessel, train_y_with_vessel, train_vessel_num = filter_useless_data(train_slice_path_list,
-                                                                                 train_liver_path_list)
+                                                                                 train_mask_path_list)
 training_set = [train_x_with_vessel, train_y_with_vessel]
 
 # get validation set from patient_19
-validation_slice_path_list, validation_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=[20],
-                                                                             shuffle=True)
+validation_slice_path_list, validation_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=[20],
+                                                                            shuffle=True)
 validation_x_with_vessel, validation_y_with_vessel, validation_vessel_num = filter_useless_data(
-    validation_slice_path_list, validation_liver_path_list)
+    validation_slice_path_list, validation_mask_path_list)
 validation_set = [validation_x_with_vessel, validation_y_with_vessel]
 
 # get test set from patient_20
-test_slice_path_list, test_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=[19], shuffle=True)
+test_slice_path_list, test_liver_mask_list = get_slice_mask_path(base_dir, patient_id_list=[19], shuffle=True)
 test_x_with_vessel, test_y_with_vessel, test_vessel_num = filter_useless_data(test_slice_path_list,
-                                                                              test_liver_path_list)
+                                                                              test_liver_mask_list)
 test_set = [test_x_with_vessel, test_y_with_vessel]
 
 # default color_dict for label 1-6
@@ -186,9 +186,9 @@ def train_and_val(gpu_id="0"):
         print("The total number of training epoch is: %s " % nb_epoch)
 
         # define Tensorboard to log the change of loss
+        writer = tf.summary.FileWriter("./vessel_loss/", sess.graph)
         tf.summary.scalar('loss', loss)
         merged = tf.summary.merge_all()
-        writer = tf.summary.FileWriter("./vessel_loss/", sess.graph)
 
         # initial  variables
         sess.run(init_op)

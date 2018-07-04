@@ -14,32 +14,13 @@ from tf_dicom.load_dicom import *
 base_dir = "/home/guest/notebooks/datasets/3Dircadb"
 
 gpu_id = "0"
-train_batch_size = 4
-test_batch_size = 20
 length = 512
 width = 512
 channel = 1
+save_test_result = False
 
-# get training set from patient_1 to patient_18
-train_patient_id_list = list(range(1, 19))
-train_slice_path_list, train_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=train_patient_id_list,
-                                                                   shuffle=True)
-train_x_with_vessel, train_y_with_vessel, train_vessel_num = filter_useless_data(train_slice_path_list,
-                                                                                 train_liver_path_list)
-training_set = [train_x_with_vessel, train_y_with_vessel]
-
-# get validation set from patient_19
-validation_slice_path_list, validation_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=[20],
-                                                                             shuffle=True)
-validation_x_with_vessel, validation_y_with_vessel, validation_vessel_num = filter_useless_data(
-    validation_slice_path_list, validation_liver_path_list)
-validation_set = [validation_x_with_vessel, validation_y_with_vessel]
-
-# get test set from patient_20
-test_slice_path_list, test_liver_path_list = get_slice_mask_path(base_dir, patient_id_list=[19], shuffle=True)
-test_x_with_vessel, test_y_with_vessel, test_vessel_num = filter_useless_data(test_slice_path_list,
-                                                                              test_liver_path_list)
-test_set = [test_x_with_vessel, test_y_with_vessel]
+# get test set from patient_19
+test_slice_path_list, test_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=[19], shuffle=False)
 
 # default color_dict for label 1-6
 default_color_dict = [
@@ -139,7 +120,7 @@ def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
     return hard_dice
 
 
-def test_dice(gpu_id="0"):
+def prediction(gpu_id="0"):
     # GPU limit
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     config = tf.ConfigProto(allow_soft_placement=True)
@@ -169,81 +150,53 @@ def test_dice(gpu_id="0"):
     # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
     train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
 
+    # saver
+    saver = tf.train.Saver()
+
     # define init_op
     init_op = tf.global_variables_initializer()
 
     with tf.Session(config=config) as sess:
-        print("#" * 30)
-
         # initial  variables
         sess.run(init_op)
 
         # restore
-        ckpt_path = "./Model_Weights/"
-        saver = tf.train.import_meta_graph(os.path.join(ckpt_path, "model.ckpt-480.meta"))
+        ckpt_path = "./save_model_and_exp_log/1st_version"
         saver.restore(sess, tf.train.latest_checkpoint(ckpt_path))
         print("load checkpoint successfully...!")
-        print("Begin to test the model performance...!")
+        print("start to make prediction...")
 
-        count_train = 0
-        train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
-        val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
-        for train_batch_x_y in get_batch(train_slice_path, train_liver_path,
-                                         batch_size=train_batch_size,
-                                         crop_by_center=False):
-            train_batch_x = train_batch_x_y[0]
-            train_batch_y = train_batch_x_y[1]
-            train_batch_x, train_batch_y = resize_batch(train_batch_x, train_batch_y, batch_size=train_batch_size,
-                                                        length=length, width=width)
+        count = 0
+        for test_slice_path in test_slice_path_list:
+            slice = pydicom.read_file(test_slice_path)
+            test_batch_x = slice.pixel_array.reshape((1, slice.pixel_array.shape[0], slice.pixel_array.shape[1], 1))
+            idx = test_slice_path_list.index(test_slice_path)
+            mask = pydicom.read_file(test_mask_path_list[idx])
+            test_batch_y = mask.pixel_array.reshape((1, mask.pixel_array.shape[0], mask.pixel_array.shape[1], 1))
 
-            _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
-                                                          feed_dict={x_img: train_batch_x, y_true: train_batch_y})
-            print("train loss = %.8f, train dice = %.8f' " % (
-                train_loss, np.mean(train_dice[np.sum(train_batch_y, axis=(1, 2, 3)) > 0])))
-            count_train += 1
-            if count_train == 3:
-                break
+            test_loss, test_dice, sig_y_pred_ = sess.run([loss, dice, sig_y_pred],
+                                                         feed_dict={x_img: test_batch_x, y_true: test_batch_y})
 
-        print("\n")
-        count_val = 0
-        for val_batch_x_y in get_batch(val_slice_path, val_liver_path,
-                                       batch_size=train_batch_size,
-                                       crop_by_center=False):
-            val_batch_x = val_batch_x_y[0]
-            val_batch_y = val_batch_x_y[1]
-            val_batch_x, val_batch_y = resize_batch(val_batch_x, val_batch_y, batch_size=train_batch_size,
-                                                    length=length, width=width)
-
-            val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
-                                                   feed_dict={x_img: val_batch_x, y_true: val_batch_y})
-            print("validation loss = %.8f, validation dice = %.8f' " % (
-                val_loss, np.mean(val_dice[np.sum(val_batch_y, axis=(1, 2, 3)) > 0])))
-            count_val += 1
-            if count_val == 3:
-                break
-
-        print("\n")
-        test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
-        count_test = 0
-        for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=test_batch_size,
-                                        crop_by_center=False):
-
-            test_batch_x = test_batch_x_y[0]
-            test_batch_y = test_batch_x_y[1]
-            test_batch_x, test_batch_y = resize_batch(test_batch_x, test_batch_y, batch_size=test_batch_size,
-                                                      length=length, width=width)
-            test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
-                                                     feed_dict={x_img: test_batch_x, y_true: test_batch_y})
-            print('test loss = %.8f, test dice = %.8f' % (
-                test_loss, np.mean(test_dice[np.sum(test_batch_y, axis=(1, 2, 3)) > 0])))
-            print("\n")
-            count_test += 1
-            if count_test == 3:
-                break
+            sig_y_pred_[sig_y_pred_ > 0.5] = 1
+            sig_y_pred_[sig_y_pred_ < 0.5] = 0
+            if save_test_result:
+                test_image_path = test_slice_path_list[count]
+                image = pydicom.read_file(test_image_path)
+                image.pixel_array.flat = np.int16(sig_y_pred_[0].reshape(y_pred[0].shape[0], y_pred[0].shape[1]))
+                image.PixelData = image.pixel_array.tostring()
+                save_dir = "./prediction_results"
+                if not os.path.isdir(save_dir):
+                    os.mkdir(save_dir)
+                image.save_as(
+                    os.path.join(save_dir, "image_{}".format(os.path.basename(test_slice_path_list[count]).split("_")[1])))
+                print('test loss = %.8f, test dice = %.8f' % (
+                    test_loss, np.mean(test_dice[np.sum(test_batch_y, axis=(1, 2, 3)) > 0])),
+                      "image_{}".format(os.path.basename(test_slice_path_list[count]).split("_")[1]), count)
+                count += 1
 
     print("*" * 30)
     print("*" * 30)
 
 
 if __name__ == '__main__':
-    test_dice(gpu_id)
+    prediction(gpu_id)
