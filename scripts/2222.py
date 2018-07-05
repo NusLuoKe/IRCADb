@@ -36,41 +36,15 @@
 #
 # print("done")
 
-
-import pydicom
-import numpy as np
-import matplotlib.pyplot as plt
-from keras.preprocessing.image import ImageDataGenerator
-
-img_generator = ImageDataGenerator(
-    rotation_range=90,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    zoom_range=0.3
-)
-
-# load dicom文件
-x_path = "D:/x.dcm"
-y_path = "D:/y.dcm"
-x_file = pydicom.dcmread(x_path)
-y_file = pydicom.dcmread(y_path)
-
-x = x_file.pixel_array
-y = y_file.pixel_array
-print(x.shape)
-
-x = np.expand_dims(x, axis=2)
-y = np.expand_dims(x, axis=2)
-print(x.shape)
-
-gen = img_generator.flow(x, y, batch_size=1)
-
-# # 读成array后画原图
-# plt.imshow(x, cmap=plt.cm.gray)
-# plt.show()
-
-plt.figure()
-for i in range(3):
-    plt.imshow(x)
-    plt.show()
-    break
+#
+# import pydicom
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from keras.preprocessing.image import ImageDataGenerator
+#
+# # load dicom文件
+# x_path = "F:/IRCAD/3Dircadb1/3Dircadb1.10/PATIENT_DICOM/image_49"
+# # image_result = pydicom.read_file(x_path)
+# image_result = pydicom.read_file(x_path)
+# print(np.max(image_result.pixel_array))
+# print(np.min(image_result.pixel_array))
