@@ -136,7 +136,7 @@ def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
     l = tf.reduce_sum(output, axis=axis)
     r = tf.reduce_sum(target, axis=axis)
     hard_dice = (2. * inse + smooth) / (l + r + smooth)
-    # hard_dice = tf.reduce_mean(hard_dice)
+    hard_dice = tf.reduce_mean(hard_dice)
     return hard_dice
 
 
@@ -193,9 +193,8 @@ def train_and_val(gpu_id="0"):
         # initial  variables
         sess.run(init_op)
 
-        # # restore
+        # # restore check point and continue training
         # ckpt_path = "./Model_Weights/"
-        # saver = tf.train.import_meta_graph(os.path.join(ckpt_path, "model.ckpt-480.meta"))
         # saver.restore(sess, tf.train.latest_checkpoint(ckpt_path))
         # print("load checkpoint successfully...!")
 
@@ -226,7 +225,7 @@ def train_and_val(gpu_id="0"):
 
                 if step % 5 == 0:
                     print('Step %d, train loss = %.8f, train dice = %.8f' % (
-                        step, train_loss, np.mean(train_dice[np.sum(train_batch_y, axis=(1, 2, 3)) > 0])))
+                        step, train_loss, train_dice))
 
                     # if np.isnan(np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])):
                     #     tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
@@ -244,8 +243,9 @@ def train_and_val(gpu_id="0"):
 
                         val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
                                                                feed_dict={x_img: val_batch_x, y_true: val_batch_y})
-                        print('Step %d, validation loss = %.8f, validation dice = %.8f' % (
-                            step, val_loss, np.mean(val_dice[np.sum(val_batch_y, axis=(1, 2, 3)) > 0])))
+
+                        # np.mean(val_dice[np.sum(val_batch_y, axis=(1, 2, 3)) > 0])
+                        print('Step %d, validation loss = %.8f, validation dice = %.8f' % (step, val_loss, val_dice))
                         print("\n")
                         break
 
@@ -255,9 +255,9 @@ def train_and_val(gpu_id="0"):
 
             print("finished training for one epoch")
             print("begin to test on this epoch")
+
             test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
             count = 0
-
             for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=test_batch_size,
                                             crop_by_center=False):
                 count += 1
@@ -267,10 +267,9 @@ def train_and_val(gpu_id="0"):
                                                           length=length, width=width)
                 test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
                                                          feed_dict={x_img: test_batch_x, y_true: test_batch_y})
-                print('test loss = %.8f, test dice = %.8f' % (
-                    test_loss, np.mean(test_dice[np.sum(test_batch_y, axis=(1, 2, 3)) > 0])))
+                print('test loss = %.8f, test dice = %.8f' % (test_loss, test_dice))
                 print("\n")
-                if count == 5:
+                if count == 3:
                     break
 
             print("*" * 30)

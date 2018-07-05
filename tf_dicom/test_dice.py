@@ -22,76 +22,6 @@ save_test_result = False
 # get test set from patient_19
 test_slice_path_list, test_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=[19], shuffle=False)
 
-# default color_dict for label 1-6
-default_color_dict = [
-    {'label': 1, 'color': [200, None, None]},
-    {'label': 2, 'color': [None, 200, None]},
-    {'label': 3, 'color': [None, None, 200]},
-    {'label': 4, 'color': [200, 200, None]},
-    {'label': 5, 'color': [None, 200, 200]},
-    {'label': 6, 'color': [200, None, 200]},
-]
-
-
-def display_segment(image, label, color_dicts=default_color_dict):
-    """Display segmentation results on original image.
-
-    Params
-    ------
-        image       : np.array(uint8): an array with shape (w,h)|(w,h,1)|(w,h,c) for original image
-        label       : np.array(int)  : an int(uint) array with shape (w,h)|(w,h,1) for label image
-        color_dicts : list of dicts  : a list of dictionary include label index and color
-
-    Returns
-    -------
-        image : np.array : an array for image with label
-
-    Examples
-    --------
-    # >>> display = display_segment(image, label)
-    # >>> display = display_segment(image, label, color_dicts=[{'label':1, 'color':[255,255,255]}])
-    """
-    if image.ndim == 2:
-        image = np.repeat(np.expand_dims(image, axis=-1), 3, axis=2)
-    elif image.ndim == 3 and image.shape[2] == 1:
-        image = np.repeat(image, 3, axis=2)
-
-    for cd in color_dicts:
-        for i, c in enumerate(cd['color']):
-            if c is not None:
-                image[:, :, i:i + 1][label == cd['label']] = c
-    return image
-
-
-def display_batch_segment(images, labels, color_dicts=default_color_dict):
-    """Display segmentation results on a batch of original images.
-
-    Params
-    ------
-        images      : np.array(uint8): an array with shape (b,w,h)|(b,w,h,1)|(b,w,h,c) for original images batch
-        labels      : np.array(int)  : an int(uint) array with shape (b,w,h)|(b,w,h,1) for label images batch
-        color_dicts : list of dicts  : a list of dictionary include label index and color
-
-    Returns
-    -------
-        images : np.array : an array for a batch of image with label
-
-    Examples
-    --------
-    # >>> display = display_segment(images, labels)
-    # >>> display = display_segment(images, labels, color_dicts=[{'label':1, 'color':[255,255,255]}])
-    """
-    if images.ndim == 3:
-        images = np.repeat(np.expand_dims(images, axis=-1), 3, axis=3)
-    elif images.ndim == 4 and images.shape[3] == 1:
-        images = np.repeat(images, 3, axis=3)
-
-    for cd in color_dicts:
-        for i, c in enumerate(cd['color']):
-            if c is not None:
-                images[:, :, :, i:i + 1][labels == cd['label']] = c
-    return images
-
 
 def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
     inse = tf.reduce_sum(output * target, axis=axis)
@@ -153,13 +83,7 @@ def prediction(gpu_id="0"):
     # saver
     saver = tf.train.Saver()
 
-    # define init_op
-    init_op = tf.global_variables_initializer()
-
     with tf.Session(config=config) as sess:
-        # initial  variables
-        sess.run(init_op)
-
         # restore
         ckpt_path = "./save_model_and_exp_log/1st_version"
         saver.restore(sess, tf.train.latest_checkpoint(ckpt_path))
@@ -178,7 +102,7 @@ def prediction(gpu_id="0"):
             # mask
             mask = pydicom.read_file(test_mask_path_list[idx])
             mask_array = mask.pixel_array
-            mask_array[image_array < -1024] = -1024
+            mask_array[image_array > 0] = 0
             test_batch_y = mask_array.reshape((1, mask.pixel_array.shape[0], mask.pixel_array.shape[1], 1))
 
             test_loss, test_dice, sig_y_pred_ = sess.run([loss, dice, sig_y_pred],
