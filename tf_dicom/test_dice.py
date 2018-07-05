@@ -167,11 +167,19 @@ def prediction(gpu_id="0"):
         print("start to make prediction...")
 
         for test_slice_path in test_slice_path_list:
+            # slice
             slice = pydicom.read_file(test_slice_path)
-            test_batch_x = slice.pixel_array.reshape((1, slice.pixel_array.shape[0], slice.pixel_array.shape[1], 1))
+            image_array = slice.pixel_array
+            image_array[image_array < -1024] = -1024
+            image_array[image_array > 1024] = 1024
+            image_array = (image_array + 1024.) / 2048.
+            test_batch_x = image_array.reshape((1, slice.pixel_array.shape[0], slice.pixel_array.shape[1], 1))
             idx = test_slice_path_list.index(test_slice_path)
+            # mask
             mask = pydicom.read_file(test_mask_path_list[idx])
-            test_batch_y = mask.pixel_array.reshape((1, mask.pixel_array.shape[0], mask.pixel_array.shape[1], 1))
+            mask_array = mask.pixel_array
+            mask_array[image_array < -1024] = -1024
+            test_batch_y = mask_array.reshape((1, mask.pixel_array.shape[0], mask.pixel_array.shape[1], 1))
 
             test_loss, test_dice, sig_y_pred_ = sess.run([loss, dice, sig_y_pred],
                                                          feed_dict={x_img: test_batch_x, y_true: test_batch_y})
@@ -187,7 +195,8 @@ def prediction(gpu_id="0"):
                 if not os.path.isdir(save_dir):
                     os.mkdir(save_dir)
                 image.save_as(
-                    os.path.join(save_dir, "image_{}".format(os.path.basename(test_slice_path_list[idx]).split("_")[1])))
+                    os.path.join(save_dir,
+                                 "image_{}".format(os.path.basename(test_slice_path_list[idx]).split("_")[1])))
                 print('test loss = %.8f, test dice = %.8f' % (
                     test_loss, np.mean(test_dice[np.sum(test_batch_y, axis=(1, 2, 3)) > 0])),
                       "image_{}".format(os.path.basename(test_slice_path_list[idx]).split("_")[1]), idx)
