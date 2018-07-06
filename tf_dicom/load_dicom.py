@@ -84,11 +84,14 @@ def get_slice_mask_path(base_dir, patient_id_list=None, shuffle=True):
 
         for slice in os.listdir(slice_path):
             single_slice_path = os.path.join(slice_path, slice)
-            slice_path_list.append(single_slice_path)
+            if os.path.basename(single_slice_path)[0:5] == "image":
+                slice_path_list.append(single_slice_path)
 
-        for liver in os.listdir(mask_path):
-            single_liver_path = os.path.join(mask_path, liver)
-            mask_path_list.append(single_liver_path)
+
+        for mask in os.listdir(mask_path):
+            single_mask_path = os.path.join(mask_path, mask)
+            if os.path.basename(single_mask_path)[0:5] == "image":
+                mask_path_list.append(single_mask_path)
 
         if shuffle == True:
             rand_num = random.randint(0, 100)
