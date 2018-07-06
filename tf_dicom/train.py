@@ -29,14 +29,14 @@ train_x_with_vessel, train_y_with_vessel, train_vessel_num = filter_useless_data
                                                                                  train_mask_path_list)
 training_set = [train_x_with_vessel, train_y_with_vessel]
 
-# get validation set from patient_19
+# get validation set from patient_20
 validation_slice_path_list, validation_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=[20],
                                                                             shuffle=True)
 validation_x_with_vessel, validation_y_with_vessel, validation_vessel_num = filter_useless_data(
     validation_slice_path_list, validation_mask_path_list)
 validation_set = [validation_x_with_vessel, validation_y_with_vessel]
 
-# get test set from patient_20
+# get test set from patient_19
 test_slice_path_list, test_liver_mask_list = get_slice_mask_path(base_dir, patient_id_list=[19], shuffle=True)
 test_x_with_vessel, test_y_with_vessel, test_vessel_num = filter_useless_data(test_slice_path_list,
                                                                               test_liver_mask_list)
@@ -153,20 +153,18 @@ def train_and_val(gpu_id="0"):
     # 1. Forward propagation
     pred = u_net.DenseNet(x_img, reduction=0.5)  # DenseNet_121(x_img, n_classes=3, is_train=True)
     y_pred = pred.outputs  # (batch_size, 512, 512, 1)
+    sig_y_pred = tf.sigmoid(y_pred)
 
     # 2. loss
-    loss_ce = tf.reduce_mean(
-        tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred), axis=(1, 2, 3)))
-    loss_dice = 1 - dice_coe(tf.sigmoid(y_pred), y_true)
-    # loss = loss_dice + loss_ce
+    # cross_entro = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=sig_y_pred))
+    loss_dice = 1 - dice_coe(output=sig_y_pred, target=y_true)
     loss = loss_dice
 
     # 3. dice
-    sig_y_pred = tf.sigmoid(y_pred)
     dice = dice_hard_coe(sig_y_pred, y_true, threshold=0.5)
 
     # 4. optimizer
-    learning_rate = 1e-4
+    learning_rate = 1e-2
     # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
     train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
 
@@ -188,6 +186,7 @@ def train_and_val(gpu_id="0"):
         # define Tensorboard to log the change of loss
         writer = tf.summary.FileWriter("./vessel_loss/", sess.graph)
         tf.summary.scalar('loss', loss)
+        tf.summary.scalar("dice", dice)
         merged = tf.summary.merge_all()
 
         # initial  variables
@@ -201,19 +200,16 @@ def train_and_val(gpu_id="0"):
         step = 0
         for epoch in range(nb_epoch):
             print("EPOCH=%s:" % epoch)
-            train_slice_path, train_liver_path = shuffle_parallel_list(training_set[0], training_set[1])
-            val_slice_path, val_liver_path = shuffle_parallel_list(validation_set[0], validation_set[1])
-            for train_batch_x_y in get_batch(train_slice_path, train_liver_path,
-                                             batch_size=train_batch_size,
+            for train_batch_x_y in get_batch(training_set[0], training_set[1], batch_size=train_batch_size,
                                              crop_by_center=False):
                 step += 1
                 train_batch_x = train_batch_x_y[0]
                 train_batch_y = train_batch_x_y[1]
-                train_batch_x, train_batch_y = resize_batch(train_batch_x, train_batch_y, batch_size=train_batch_size,
-                                                            length=length, width=width)
+                # train_batch_x, train_batch_y = resize_batch(train_batch_x, train_batch_y, batch_size=train_batch_size,
+                #                                             length=length, width=width)
 
-                _, train_loss, train_dice, _y_true = sess.run([train_op, loss, dice, y_true],
-                                                              feed_dict={x_img: train_batch_x, y_true: train_batch_y})
+                _, train_loss, train_dice = sess.run([train_op, loss, dice],
+                                                     feed_dict={x_img: train_batch_x, y_true: train_batch_y})
 
                 # tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
                 # display = display_batch_segment(train_batch_x, train_batch_y)
@@ -224,8 +220,7 @@ def train_and_val(gpu_id="0"):
                     writer.add_summary(rs, step)
 
                 if step % 5 == 0:
-                    print('Step %d, train loss = %.8f, train dice = %.8f' % (
-                        step, train_loss, train_dice))
+                    print('Step %d, train loss = %.8f, train dice = %.8f' % (step, train_loss, train_dice))
 
                     # if np.isnan(np.mean(train_dice[np.sum(_y_true, axis=(1, 2, 3)) > 0])):
                     #     tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
@@ -233,44 +228,37 @@ def train_and_val(gpu_id="0"):
                     #     tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))
 
                 if step % 200 == 0:
-                    for val_batch_x_y in get_batch(val_slice_path, val_liver_path,
-                                                   batch_size=train_batch_size,
+                    for val_batch_x_y in get_batch(validation_set[0], validation_set[1], batch_size=train_batch_size,
                                                    crop_by_center=False):
                         val_batch_x = val_batch_x_y[0]
                         val_batch_y = val_batch_x_y[1]
-                        val_batch_x, val_batch_y = resize_batch(val_batch_x, val_batch_y, batch_size=train_batch_size,
-                                                                length=length, width=width)
+                        # val_batch_x, val_batch_y = resize_batch(val_batch_x, val_batch_y, batch_size=train_batch_size,
+                        #                                         length=length, width=width)
 
-                        val_loss, val_dice, _y_true = sess.run([loss, dice, y_true],
-                                                               feed_dict={x_img: val_batch_x, y_true: val_batch_y})
+                        val_loss, val_dice = sess.run([loss, dice], feed_dict={x_img: val_batch_x, y_true: val_batch_y})
 
                         # np.mean(val_dice[np.sum(val_batch_y, axis=(1, 2, 3)) > 0])
                         print('Step %d, validation loss = %.8f, validation dice = %.8f' % (step, val_loss, val_dice))
                         print("\n")
                         break
 
-            if epoch % 40 == 0:
+            if epoch % 5 == 0:
                 saver.save(sess, './Model_Weights/model.ckpt', global_step=epoch)
                 print("Saved a check point...")
 
             print("finished training for one epoch")
             print("begin to test on this epoch")
 
-            test_slice_path, test_liver_path = shuffle_parallel_list(test_set[0], test_set[1])
-            count = 0
-            for test_batch_x_y in get_batch(test_slice_path, test_liver_path, batch_size=test_batch_size,
+            for test_batch_x_y in get_batch(test_set[0], test_set[1], batch_size=test_batch_size,
                                             crop_by_center=False):
-                count += 1
                 test_batch_x = test_batch_x_y[0]
                 test_batch_y = test_batch_x_y[1]
-                test_batch_x, test_batch_y = resize_batch(test_batch_x, test_batch_y, batch_size=test_batch_size,
-                                                          length=length, width=width)
-                test_loss, test_dice, _y_true = sess.run([loss, dice, y_true],
-                                                         feed_dict={x_img: test_batch_x, y_true: test_batch_y})
+                # test_batch_x, test_batch_y = resize_batch(test_batch_x, test_batch_y, batch_size=test_batch_size,
+                #                                           length=length, width=width)
+                test_loss, test_dice = sess.run([loss, dice], feed_dict={x_img: test_batch_x, y_true: test_batch_y})
                 print('test loss = %.8f, test dice = %.8f' % (test_loss, test_dice))
                 print("\n")
-                if count == 3:
-                    break
+                break
 
             print("*" * 30)
             print("*" * 30)

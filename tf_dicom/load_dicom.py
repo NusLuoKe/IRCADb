@@ -147,49 +147,49 @@ def get_batch(slice_path, mask_path, batch_size, crop_by_center=False, center=No
     for i in range(1, batch_num):
         if (batch_size * batch_num) == len(slice_path):
             slice_batch = slice_path[batch_size * (i - 1):batch_size * i]
-            liver_batch = mask_path[batch_size * (i - 1):batch_size * i]
+            mask_batch = mask_path[batch_size * (i - 1):batch_size * i]
 
         elif (batch_size * batch_num) != len(slice_path):
             if i < batch_num:
                 slice_batch = slice_path[batch_size * (i - 1):batch_size * i]
-                liver_batch = mask_path[batch_size * (i - 1):batch_size * i]
+                mask_batch = mask_path[batch_size * (i - 1):batch_size * i]
             else:
                 slice_batch = slice_path[batch_size * (i - 1):len(slice_path)]
-                liver_batch = mask_path[batch_size * (i - 1):len(mask_path)]
+                mask_batch = mask_path[batch_size * (i - 1):len(mask_path)]
 
                 append_num = (batch_size * batch_num) - len(slice_path)
                 for j in range(append_num):
                     slice_batch.append(slice_path[j])
-                    liver_batch.append(mask_path[j])
+                    mask_batch.append(mask_path[j])
 
         # slice_batch is a batch in form of [[files' path],[files' path],[files' path]]
         batch_x = []
         for image_path in slice_batch:
-            image_file = pydicom.dcmread(image_path)
+            image_file = pydicom.read_file(image_path)
             image_array = image_file.pixel_array
-            # data truncation
-            image_array[image_array < -1024] = -1024
-            image_array[image_array > 1024] = 1024
-            image_array = (image_array + 1024.) / 2048.
+            # # data truncation
+            # image_array[image_array < -1024] = -1024
+            # image_array[image_array > 1024] = 1024
+            # image_array = (image_array + 1024.) / 2048.
 
             if crop_by_center:
                 image_array = set_center_crop(x=image_array, width=width, height=height, center=center)
             batch_x.append(image_array)
 
         batch_y = []
-        for image_path in liver_batch:
-            image_file = pydicom.dcmread(image_path)
+        for image_path in mask_batch:
+            image_file = pydicom.read_file(image_path)
             image_array = image_file.pixel_array
-            # data truncation
-            image_array[image_array > 0] = 1
+            # # data truncation
+            # image_array[image_array > 0] = 1
 
             if crop_by_center:
                 image_array = set_center_crop(x=image_array, width=width, height=height, center=center)
             batch_y.append(image_array)
 
-        batch_x = np.asarray(batch_x)
+        batch_x = np.array(batch_x)
         batch_x = batch_x.reshape((batch_x.shape[0], batch_x.shape[1], batch_x.shape[2], 1))
-        batch_y = np.asarray(batch_y)
+        batch_y = np.array(batch_y)
         batch_y = batch_y.reshape((batch_y.shape[0], batch_y.shape[1], batch_y.shape[2], 1))
 
         yield (batch_x, batch_y)
@@ -269,3 +269,29 @@ def shuffle_parallel_list(list_1, list_2):
     random.seed(rand_num)
     random.shuffle(list_2)
     return list_1, list_2
+
+
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+###############################################################################################
+import matplotlib.pyplot as plt
+
+base_dir = "F:/IRCAD/3Dircadb1/"
+patient_id_list = list(range(1, 4))
+slice_path_list, mask_path_list = get_slice_mask_path(base_dir, patient_id_list, shuffle=True)
+x_with_mask, y_with_mask, mask_num = filter_useless_data(slice_path_list, mask_path_list)
+
+for batch_x_y in get_batch(x_with_mask, y_with_mask, batch_size=1, crop_by_center=False):
+    batch_x = batch_x_y[0]
+    batch_y = batch_x_y[1]
+    print(batch_x.shape)
+    x = batch_x.reshape((512, 512))
+    y = batch_y.reshape((512, 512))
+    plt.imshow(x, cmap="gray")
+    plt.show()
+    plt.imshow(y, cmap="gray")
+    plt.show()
+    break
