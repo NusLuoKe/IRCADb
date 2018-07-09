@@ -9,6 +9,7 @@ import tensorlayer as tl
 
 from tf_dicom import u_net
 from tf_dicom.load_dicom import *
+import dicom
 
 # base_dir = "F:/IRCAD/3Dircadb1/"
 base_dir = "/home/guest/notebooks/datasets/3Dircadb"
@@ -65,7 +66,8 @@ def prediction(gpu_id="0"):
     # 2. loss
     cross_entro = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=sig_y_pred))
     loss_dice = 1 - dice_coe(output=sig_y_pred, target=y_true)
-    loss = loss_dice + cross_entro
+    # loss = loss_dice + cross_entro
+    loss = loss_dice
 
     # 3. dice
     dice = dice_hard_coe(sig_y_pred, y_true, threshold=0.5)
@@ -75,16 +77,16 @@ def prediction(gpu_id="0"):
 
     with tf.Session(config=config) as sess:
         # restore
-        ckpt_path = "./save_model_and_exp_log/1st_version"
+        ckpt_path = "./Model_Weights"
         saver.restore(sess, tf.train.latest_checkpoint(ckpt_path))
         print("load checkpoint successfully...!")
         print("start to make prediction...")
 
         # get test set from patient_19
-        test_slice_path_list, test_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=[19], shuffle=False)
+        test_slice_path_list, test_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=[1], shuffle=False)
         for test_slice_path in test_slice_path_list:
             # slice
-            slice = pydicom.read_file(test_slice_path)
+            slice = dicom.read_file(test_slice_path)
             image_array = slice.pixel_array
             # image_array[image_array < -1024] = -1024
             # image_array[image_array > 1024] = 1024
@@ -92,9 +94,9 @@ def prediction(gpu_id="0"):
             test_x = image_array.reshape((1, slice.pixel_array.shape[0], slice.pixel_array.shape[1], 1))
             idx = test_slice_path_list.index(test_slice_path)
             # mask
-            mask = pydicom.read_file(test_mask_path_list[idx])
+            mask = dicom.read_file(test_mask_path_list[idx])
             mask_array = mask.pixel_array
-            mask_array[image_array > 0] = 0
+            # mask_array[image_array > 0] = 1
             test_y = mask_array.reshape((1, mask.pixel_array.shape[0], mask.pixel_array.shape[1], 1))
 
             test_loss, test_dice, sig_y_pred_ = sess.run([loss, dice, sig_y_pred],
@@ -102,10 +104,21 @@ def prediction(gpu_id="0"):
 
             sig_y_pred_[sig_y_pred_ > 0.5] = 1
             sig_y_pred_[sig_y_pred_ < 0.5] = 0
+
+            # post processing for patient 1
+            img = sig_y_pred_[0].reshape(sig_y_pred_[0].shape[0], sig_y_pred_[0].shape[1])
+            flip_img = np.flip(img, axis=0)
+            # crop row
+            flip_img[0:200, :] = 0
+            flip_img[300:512, :] = 0
+            # crop column
+            flip_img[:, 350:512] = 0
+            flip_img[:, 0:30] = 0
+
             if save_test_result:
                 test_image_path = test_slice_path_list[idx]
-                image = pydicom.read_file(test_image_path)
-                image.pixel_array.flat = np.int16(sig_y_pred_[0].reshape((512, 512)))
+                image = dicom.read_file(test_image_path)
+                image.pixel_array.flat = np.int16(flip_img)
                 image.PixelData = image.pixel_array.tostring()
                 save_dir = "./prediction_results"
                 if not os.path.isdir(save_dir):
@@ -113,8 +126,7 @@ def prediction(gpu_id="0"):
                 image.save_as(
                     os.path.join(save_dir,
                                  "image_{}".format(os.path.basename(test_slice_path_list[idx]).split("_")[1])))
-                print('test loss = %.8f, test dice = %.8f' % (
-                    test_loss, np.mean(test_dice[np.sum(test_y, axis=(1, 2, 3)) > 0])),
+                print('test loss = %.8f, test dice = %.8f' % (test_loss, test_dice),
                       "image_{}".format(os.path.basename(test_slice_path_list[idx]).split("_")[1]), idx)
 
                 print("*" * 30)
