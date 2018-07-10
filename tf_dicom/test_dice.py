@@ -95,6 +95,7 @@ def prediction(gpu_id="0"):
             test_x = image_array.reshape((1, slice.pixel_array.shape[0], slice.pixel_array.shape[1], 1))
             idx = test_slice_path_list.index(test_slice_path)
             # mask
+
             mask = pydicom.read_file(test_mask_path_list[idx])
             # mask = dicom.read_file(test_mask_path_list[idx])
             mask_array = mask.pixel_array
@@ -107,18 +108,12 @@ def prediction(gpu_id="0"):
             sig_y_pred_[sig_y_pred_ > 0.5] = 1
             sig_y_pred_[sig_y_pred_ < 0.5] = 0
 
-            # post processing for patient 1
-            img = sig_y_pred_[0].reshape(sig_y_pred_[0].shape[0], sig_y_pred_[0].shape[1])
-            flip_img = np.flip(img, axis=0)
-            # crop row
-            flip_img[0:200, :] = 0
-            flip_img[300:512, :] = 0
-            # crop column
-            flip_img[:, 350:512] = 0
-            flip_img[:, 0:30] = 0
-
             if save_test_result:
-                test_image_path = test_slice_path_list[idx]
+                # post processing for patient 1
+                img = sig_y_pred_[0].reshape(sig_y_pred_[0].shape[0], sig_y_pred_[0].shape[1])
+                flip_img = np.flip(img, axis=0)
+
+                test_image_path = test_mask_path_list[idx]
                 # image = dicom.read_file(test_image_path)
                 image = pydicom.read_file(test_image_path)
                 image.pixel_array.flat = np.int16(flip_img)
@@ -132,7 +127,6 @@ def prediction(gpu_id="0"):
                 print('test loss = %.8f, test dice = %.8f' % (test_loss, test_dice),
                       "image_{}".format(os.path.basename(test_slice_path_list[idx]).split("_")[1]), idx)
 
-                print("*" * 30)
                 print("*" * 30)
 
 

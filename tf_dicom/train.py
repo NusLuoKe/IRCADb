@@ -166,7 +166,8 @@ def train_and_val(gpu_id="0"):
     # 4. optimizer
     learning_rate = 1e-2
     # train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-    train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+    # train_op = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+    train_op = tf.train.MomentumOptimizer(learning_rate, momentum=0.9).minimize(loss)
 
     # saver
     saver = tf.train.Saver()
