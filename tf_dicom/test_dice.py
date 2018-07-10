@@ -86,7 +86,8 @@ def prediction(gpu_id="0"):
         test_slice_path_list, test_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=[1], shuffle=False)
         for test_slice_path in test_slice_path_list:
             # slice
-            slice = dicom.read_file(test_slice_path)
+            slice = pydicom.read_file(test_slice_path)
+            # slice = dicom.read_file(test_slice_path)
             image_array = slice.pixel_array
             # image_array[image_array < -1024] = -1024
             # image_array[image_array > 1024] = 1024
@@ -94,7 +95,8 @@ def prediction(gpu_id="0"):
             test_x = image_array.reshape((1, slice.pixel_array.shape[0], slice.pixel_array.shape[1], 1))
             idx = test_slice_path_list.index(test_slice_path)
             # mask
-            mask = dicom.read_file(test_mask_path_list[idx])
+            mask = pydicom.read_file(test_mask_path_list[idx])
+            # mask = dicom.read_file(test_mask_path_list[idx])
             mask_array = mask.pixel_array
             # mask_array[image_array > 0] = 1
             test_y = mask_array.reshape((1, mask.pixel_array.shape[0], mask.pixel_array.shape[1], 1))
@@ -117,7 +119,8 @@ def prediction(gpu_id="0"):
 
             if save_test_result:
                 test_image_path = test_slice_path_list[idx]
-                image = dicom.read_file(test_image_path)
+                # image = dicom.read_file(test_image_path)
+                image = pydicom.read_file(test_image_path)
                 image.pixel_array.flat = np.int16(flip_img)
                 image.PixelData = image.pixel_array.tostring()
                 save_dir = "./prediction_results"
