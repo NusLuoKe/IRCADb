@@ -78,7 +78,7 @@ def get_slice_mask_path(base_dir, patient_id_list=None, shuffle=True):
 
     for patient_id in patient_id_list:
         patient_dicom_path = "3Dircadb1." + str(patient_id) + "/PATIENT_DICOM"
-        mask_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/portalvein"
+        mask_dicom_path = "3Dircadb1." + str(patient_id) + "/MASKS_DICOM/liver"
         slice_path = os.path.join(base_dir, patient_dicom_path)
         mask_path = os.path.join(base_dir, mask_dicom_path)
 
@@ -103,13 +103,15 @@ def get_slice_mask_path(base_dir, patient_id_list=None, shuffle=True):
     return slice_path_list, mask_path_list
 
 
-def filter_useless_data(slice_path_list, mask_path_list):
+def filter_useless_data(slice_path_list, mask_path_list, reserve_some=False, reserve_num=None):
     '''
     filter out those slices with no mask.
     (eg: filter out those slices with no vessel in 3Dircadb1 data set)
 
     :param slice_path_list: the list contains file path of all slices
     :param mask_path_list: the list contains file path of all masks
+    :param reserve_some: default to be False, when True, can reserve some slices without mask(liver, etc) in the list
+    :param reserve_num: number of reserved slices without mask
     :return:
     x_with_mask: list, contains file path of slices with mask
     y_with_mask: list, contains file path of masks for those slices with mask
@@ -121,11 +123,23 @@ def filter_useless_data(slice_path_list, mask_path_list):
     for image_path in mask_path_list:
         image_file = pydicom.dcmread(image_path)
         image_array = image_file.pixel_array
+
         if np.sum(image_array) > 0:
             mask_num += 1
             idx = mask_path_list.index(image_path)
             y_with_mask.append(image_path)
             x_with_mask.append(slice_path_list[idx])
+        else:
+            count_reserve = 0
+            while reserve_some:
+                mask_num += 1
+                count_reserve += 1
+                idx = mask_path_list.index(image_path)
+                y_with_mask.append(image_path)
+                x_with_mask.append(slice_path_list[idx])
+                if count_reserve == reserve_num:
+                    reserve_some = False
+
     return x_with_mask, y_with_mask, mask_num
 
 
@@ -280,21 +294,21 @@ def shuffle_parallel_list(list_1, list_2):
 ###############################################################################################
 ###############################################################################################
 ###############################################################################################
-import matplotlib.pyplot as plt
-
-base_dir = "F:/IRCAD/3Dircadb1/"
-patient_id_list = list(range(1, 4))
-slice_path_list, mask_path_list = get_slice_mask_path(base_dir, patient_id_list, shuffle=True)
-x_with_mask, y_with_mask, mask_num = filter_useless_data(slice_path_list, mask_path_list)
-
-for batch_x_y in get_batch(x_with_mask, y_with_mask, batch_size=1, crop_by_center=False):
-    batch_x = batch_x_y[0]
-    batch_y = batch_x_y[1]
-    print(batch_x.shape)
-    x = batch_x.reshape((512, 512))
-    y = batch_y.reshape((512, 512))
-    plt.imshow(x, cmap="gray")
-    plt.show()
-    plt.imshow(y, cmap="gray")
-    plt.show()
-    break
+# import matplotlib.pyplot as plt
+#
+# base_dir = "F:/IRCAD/3Dircadb1/"
+# patient_id_list = list(range(1, 4))
+# slice_path_list, mask_path_list = get_slice_mask_path(base_dir, patient_id_list, shuffle=True)
+# x_with_mask, y_with_mask, mask_num = filter_useless_data(slice_path_list, mask_path_list)
+#
+# for batch_x_y in get_batch(x_with_mask, y_with_mask, batch_size=1, crop_by_center=False):
+#     batch_x = batch_x_y[0]
+#     batch_y = batch_x_y[1]
+#     print(batch_x.shape)
+#     x = batch_x.reshape((512, 512))
+#     y = batch_y.reshape((512, 512))
+#     plt.imshow(x, cmap="gray")
+#     plt.show()
+#     plt.imshow(y, cmap="gray")
+#     plt.show()
+#     break

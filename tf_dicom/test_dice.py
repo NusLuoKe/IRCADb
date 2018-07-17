@@ -94,10 +94,7 @@ def prediction(gpu_id="0"):
             # image_array = (image_array + 1024.) / 2048.
             test_x = image_array.reshape((1, slice.pixel_array.shape[0], slice.pixel_array.shape[1], 1))
             idx = test_slice_path_list.index(test_slice_path)
-            # mask
-
             mask = pydicom.read_file(test_mask_path_list[idx])
-            # mask = dicom.read_file(test_mask_path_list[idx])
             mask_array = mask.pixel_array
             # mask_array[image_array > 0] = 1
             test_y = mask_array.reshape((1, mask.pixel_array.shape[0], mask.pixel_array.shape[1], 1))
