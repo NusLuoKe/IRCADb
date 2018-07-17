@@ -7,8 +7,8 @@
 import tensorflow as tf
 import tensorlayer as tl
 
-from tf_dicom import u_net
-from tf_dicom.load_dicom import *
+from unet_seg import u_net
+from unet_seg.load_dicom import *
 import dicom
 
 # base_dir = "F:/IRCAD/3Dircadb1/"
