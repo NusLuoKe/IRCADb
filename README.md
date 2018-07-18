@@ -16,7 +16,7 @@ Above two images are the 3D reconstruction results of the ground truth.
 ### **2. Model prediction on training set.(Patient 1) -- DenseUnet**    
 
 
-![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/dense_unet_p1.png){:height="280px" width="400px"}
+![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/dense_unet_p1.png){:height="120px" width="200px"}
 Above image shows the prediction result on the training set(Patient 1). 
 Prediction result is given by the DenseUnet.    
   
@@ -30,7 +30,7 @@ Prediction result is given by the DenseUnet.
 ### **3. Model prediction on training set with a very simple post processing -- crop.(Patient 1) -- DenseUnet**  
 
 
-![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/dense_unet_p1_post_processing.png){:height="280px" width="400px"}
+![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/dense_unet_p1_post_processing.png){:height="120px" width="200px"}
 Above image shows the prediction result of one slice on the training set(Patient 1) in the ITK-SNAP. 
 Prediction result is given by the DenseUnet with post processing.  
 
@@ -44,7 +44,7 @@ which has a coordinate of a approximately location of the liver in the original 
 
 ***NOTE: Implemention of Mask-rcnn is based on [https://github.com/matterport/Mask_RCNN](https://github.com/matterport/Mask_RCNN).*** 
   
-![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p1.png){:height="280px" width="400px"}  
+![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p1.png){:height="120px" width="200px"} 
 Above image shows the prediction result of one slice in the ITK-SNAP.  
   
        
