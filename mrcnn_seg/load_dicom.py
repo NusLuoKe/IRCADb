@@ -89,13 +89,3 @@ def filter_useless_data(slice_path_list, mask_path_list, reserve_some=False, res
                     reserve_some = False
 
     return x_with_mask, y_with_mask, mask_num
-
-
-# base_dir = "F:/IRCAD/3Dircadb1/"
-# train_patient_id_list = [1]
-# train_slice_path_list, train_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=train_patient_id_list,
-#                                                                   shuffle=True)
-# train_x_with_vessel, train_y_with_vessel, train_vessel_num = filter_useless_data(train_slice_path_list,
-#                                                                                  train_mask_path_list,
-#                                                                                  reserve_some=True, reserve_num=10)
-# print(train_vessel_num)

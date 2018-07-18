@@ -8,14 +8,13 @@
 import os
 import sys
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pydicom
 import tensorflow as tf
 
-import mrcnn_seg.model as modellib
-from mrcnn_seg import liver_mrcnn
-from mrcnn_seg import utils
+import mrcnn.model as modellib
+from mrcnn import liver_mrcnn
+from mrcnn import utils
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../")
@@ -59,12 +58,6 @@ DEVICE = "/gpu:1"  # /cpu:0 or /gpu:0
 # values: 'inference' or 'training'
 TEST_MODE = "inference"
 
-
-def get_ax(rows=1, cols=1, size=16):
-    _, ax = plt.subplots(rows, cols, figsize=(size * cols, size * rows))
-    return ax
-
-
 # Build validation dataset
 base_dir = "../3Dircadb1"
 # train_patient_id_list = list(range(1, 19))
@@ -90,7 +83,6 @@ weights_path = LIVERS_MODEL_PATH
 print("Loading weights ", weights_path)
 model.load_weights(weights_path, by_name=True)
 
-# TODO:
 for image_id in dataset.image_ids:
     info = dataset.image_info[image_id]
     print("ori slice path %s" % info['path'])
@@ -133,15 +125,11 @@ for image_id in dataset.image_ids:
     det_masks = np.array([utils.unmold_mask(m, det_boxes[i], image.shape)
                           for i, m in enumerate(det_mask_specific)])
 
-    print(type(det_masks))
-    print(det_masks.shape)
     if len(det_masks) == 0:
         det_masks = np.zeros((1, 512, 512))
     elif det_masks.shape[0] != 1:
         # eg: det_masks = (2, 512, 512) to (1, 512, 512)
         det_masks = np.reshape(np.logical_or(det_masks[0, :, :], det_masks[1, :, :]), (1, 512, 512))
-        print("######################")
-        print(det_masks.shape)
 
     img = det_masks.reshape(det_masks.shape[1], det_masks.shape[2])
     flip_img = np.flip(img, axis=0)

@@ -4,18 +4,37 @@
 # @File    : liver_mrcnn.py
 # @Author  : NUS_LuoKe
 
+"""
+Mask R-CNN
+Train on the toy Balloon dataset and implement color splash effect.
+Copyright (c) 2018 Matterport, Inc.
+Licensed under the MIT License (see LICENSE for details)
+Written by Waleed Abdulla
+------------------------------------------------------------
+Usage: import the module (see Jupyter notebooks for examples), or run from
+       the command line as such:
+    # Train a new model starting from pre-trained COCO weights
+    python3 balloon.py train --dataset=/path/to/balloon/dataset --weights=coco
+    # Resume training a model that you had trained earlier
+    python3 balloon.py train --dataset=/path/to/balloon/dataset --weights=last
+    # Train a new model starting from ImageNet weights
+    python3 balloon.py train --dataset=/path/to/balloon/dataset --weights=imagenet
+    # Apply color splash to an image
+    python3 balloon.py splash --weights=/path/to/weights/file.h5 --image=<URL or path to file>
+    # Apply color splash to video using the last weights you trained
+    python3 balloon.py splash --weights=last --video=<URL or path to file>
+"""
 
 import os
 import sys
 
 import imgaug  # https://github.com/aleju/imgaug (pip3 install imgaug)
+import nibabel as nib
 import numpy as np
 import pydicom
 import skimage.draw
-
-from mrcnn import load_dicom
-from mrcnn import model as modellib, utils
-from mrcnn.config import Config
+import model as modellib, utils
+from config import Config
 
 # Root directory of the project
 ROOT_DIR = os.path.abspath("../")
@@ -71,7 +90,7 @@ class LiverConfig(Config):
     IMAGE_MAX_DIM = 512
 
     # Image mean(RGB), for gray CT image, copy one channel to three channels
-    MEAN_PIXEL = np.array([-534.3, -534.3, -534.3])  # mean for the IRCADb data set
+    MEAN_PIXEL = np.array([-157.4, -157.4, -157.4])  # mean for LITS data set
 
 
 ############################################################
@@ -80,50 +99,49 @@ class LiverConfig(Config):
 
 class LiverDataset(utils.Dataset):
     '''
-    The constructed dataset needs to inherit the utils.Dataset class and need to override the following methods:
-    load_livers()
+    The constructed dataset needs to inherit the utils.Dataset class and override the following methods:
     load_image()
     load_mask()
+    image_reference()
     '''
 
-    def load_livers(self, base_dir, patient_id_list, shuffle=True, filter_liver=True, reserve_some=False,
-                    reserve_num=None):
+    def load_livers(self, slice_nii_dir):
         # Add classes. We have one class.
         # Naming the dataset nucleus, and the class nucleus
         self.add_class("livers", 1, "livers")
 
-        # Get image ids from directory names
-        slice_path_list, mask_path_list = load_dicom.get_slice_mask_path(base_dir,
-                                                                         patient_id_list=patient_id_list,
-                                                                         shuffle=shuffle)
-        if filter_liver:
-            slice_with_liver, mask_with_liver, _ = load_dicom.filter_useless_data(slice_path_list, mask_path_list,
-                                                                                  reserve_some=reserve_some,
-                                                                                  reserve_num=reserve_num)
-        else:
-            slice_with_liver = slice_path_list
-
-        # Add images
-        for slice_path in slice_with_liver:
-            # patient_id = os.path.split(slice_path)[0].split("/")[3].split(".")[1] # server
-            patient_id = os.path.split(slice_path)[0].split("/")[2].split(".")[1]  # workstation
-            patient_image_id = os.path.split(slice_path)[1]
-            image_id = "p" + patient_id + "_" + patient_image_id  # eg: p1_image_71,
-            self.add_image(
-                source="livers",
-                image_id=image_id,
-                path=slice_path)
+        for slice_nii in os.listdir(slice_nii_dir):
+            patient_id = os.path.split(slice_nii)[0].split("-")[-1]
+            nii_path = os.path.join(slice_nii_dir, slice_nii)
+            nii = nib.load(nii_path)
+            nii_arr = nii.get_fdata()  # eg: nii_arr.shape = (512, 512, 78), 78 is the number of slices
+            patient_slice_num = nii_arr.shape[-1]
+            for i in range(patient_slice_num):
+                image_id = "p" + patient_id + "_" + i  # eg: p1_71,
+                # slice_path: eg: "./volume-1/i"
+                # this is not a real path, i means the index in the nii_arr.
+                # slice_arr = nii_arr[:, :, i]
+                slice_path = os.path.join(nii_path, i)
+                self.add_image(
+                    source="livers",
+                    image_id=image_id,
+                    path=slice_path)
 
     def load_image(self, image_id):
         """Load the specified image and return a [H,W,3] Numpy array.
         """
         image_path = self.image_info[image_id]['path']
-        image_file = pydicom.read_file(image_path)
-        image = image_file.pixel_array
+        # TODO
+        corres_nii_path = os.path.split(image_path)[0]
+        slice_id = os.path.split(image_path)[-1]
+        nii = nib.load(corres_nii_path)
+        nii_arr = nii.get_fdata()
+        image = nii_arr[:, :, slice_id]
 
         # Truncated pixel value
-        image[image < -1024] = -1024
-        image[image > 1024] = 1024
+        image[image < -200] = -200
+        image[image > 250] = 250
+        image = image - 48
 
         # If grayscale. Convert to RGB for consistency.
         if image.ndim != 3:
@@ -134,17 +152,17 @@ class LiverDataset(utils.Dataset):
         return image
 
     def load_mask(self, image_id):
-        info = self.image_info[image_id]
-        # Get mask directory from image path
-        mask_name = os.path.split(info['path'])[1]
-        mask_dir = os.path.join(os.path.dirname(os.path.dirname(info['path'])), "MASKS_DICOM/liver")
+        mask_path = self.image_info[image_id]['path']  # eg: mask_path = "./volume-1/i"
+        patient_id = os.path.split(mask_path)[0].split("/")[-1].split("-")[-1]
+        corres_nii_path = os.path.join(os.path.split(os.path.split(mask_path)[0])[0],
+                                       "segmentation-{}".format(patient_id))
+        mask_id = os.path.split(mask_path)[-1]
 
-        # Read mask files from .png image
+        nii = nib.load(corres_nii_path)
+        nii_arr = nii.get_fdata()
+
         mask = []
-        mask_path = os.path.join(mask_dir, mask_name)
-        mask_file = pydicom.read_file(mask_path)
-        m = mask_file.pixel_array.astype(np.bool)
-
+        m = nii_arr[:, :, mask_id].astype(np.bool)
         mask.append(m)
         mask = np.stack(mask, axis=-1)
         return mask, np.ones([mask.shape[-1]], dtype=np.int32)
