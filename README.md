@@ -1,6 +1,5 @@
 # ***3D-IRCADb 01 Data Set***  
 
----
 This project is to do some segmentation works on the [***3D-IRCADb 01***](https://www.ircad.fr/research/3d-ircadb-01/) data set.  
 This data set contains the original CT scans of 20 patients. Meanwhile, corresponding mask for each organ is also provided.  
 
@@ -9,14 +8,15 @@ This data set contains the original CT scans of 20 patients. Meanwhile, correspo
 ---
 ### **1. Original Data & 3D Reconstruction of Liver.**  
 
----
+
 ![](https://github.com/NusLuoKe/tf_dicom/blob/master/readme_img/ori_mask_1.png)
 ![](https://github.com/NusLuoKe/tf_dicom/blob/master/readme_img/ori_mask_2.png)    
 Above two images are the 3D reconstruction results of the ground truth.  
 
+---
 ### **2. Model prediction on training set.(Patient 1) -- DenseUnet**    
 
----
+
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/dense_unet_p1.png)  
 Above image shows the prediction result on the training set(Patient 1). 
 Prediction result is given by the DenseUnet.    
@@ -27,9 +27,10 @@ Prediction result is given by the DenseUnet.
  just feed the original slice into the model and there are many noises in the output. 
 
 
+---
 ### **3. Model prediction on training set with a very simple post processing -- crop.(Patient 1) -- DenseUnet**  
 
----
+
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/dense_unet_p1_post_processing.png)
 Above image shows the prediction result of one slice on the training set(Patient 1) in the ITK-SNAP. 
 Prediction result is given by the DenseUnet with post processing.  
@@ -37,11 +38,11 @@ Prediction result is given by the DenseUnet with post processing.
 * The method to do post processing on the prediction result is very simple, just crop the output slice by a box 
 which has a coordinate of a approximately location of the liver in the original slice. So the result is not good as well.
   
-  
-          
+
+---   
 ### **4. Model prediction on training set. (Patient 1) -- Mask-rcnn**
 
----
+
 ***NOTE: Implemention of Mask-rcnn is based on [https://github.com/matterport/Mask_RCNN](https://github.com/matterport/Mask_RCNN).*** 
   
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p1.png)  
@@ -54,10 +55,12 @@ Above image shows the prediction result on the training set(Patient 1).
 Prediction result is given by the Mask-rcnn.  
 
 * Comparing to the result given by DenseUet, the segmentation effect is much better.The dice coefficient is around 0.97.
- 
+
+
+--- 
 ### **5. Model prediction on validation set. (Patient 19) -- Mask-rcnn**
 
----
+
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p19_01.png)
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p19_02.png)  
 Above image shows the prediction result on the validation set(Patient 19). 
@@ -65,9 +68,11 @@ Prediction result is given by the Mask-rcnn.
 
 * The segmentation effect on validation set is good as well.   
 
-### **6. Model prediction on validation set. (Patient 20) -- Mask-rcnn**
 
 ---
+### **6. Model prediction on validation set. (Patient 20) -- Mask-rcnn**
+
+
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p20_01.png)
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p20_02.png)  
 Above image shows the prediction result on the test set(Patient 20). 
