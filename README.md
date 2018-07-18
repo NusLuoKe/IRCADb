@@ -5,7 +5,6 @@ This data set contains the original CT scans of 20 patients. Meanwhile, correspo
 
 ## ***Liver Segmentation***
 
----
 ### **1. Original Data & 3D Reconstruction of Liver.**  
 
 
@@ -56,21 +55,8 @@ Prediction result is given by the Mask-rcnn.
 
 * Comparing to the result given by DenseUet, the segmentation effect is much better.The dice coefficient is around 0.97.
 
-
---- 
-### **5. Model prediction on validation set. (Patient 19) -- Mask-rcnn**
-
-
-![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p19_01.png)
-![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p19_02.png)  
-Above image shows the prediction result on the validation set(Patient 19). 
-Prediction result is given by the Mask-rcnn.  
-
-* The segmentation effect on validation set is good as well.   
-
-
 ---
-### **6. Model prediction on validation set. (Patient 20) -- Mask-rcnn**
+### **5. Model prediction on validation set. (Patient 20) -- Mask-rcnn**
 
 
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p20_01.png)
