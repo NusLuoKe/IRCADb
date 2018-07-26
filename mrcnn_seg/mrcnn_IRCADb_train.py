@@ -1,9 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # @Time    : 2018/7/12 15:03
-# @File    : liver_mrcnn.py
+# @File    : mrcnn_IRCADb_train.py
 # @Author  : NUS_LuoKe
 
+'''
+When overwrite the load_livers(), load_image() and load_mask() methods in class LiverDataset, just make sure each slice
+to feed into the model should have an unique id and the returned "image" in the load_image() method should be an array
+with shape like [height, width, 3].
+'''
 
 import os
 import sys
