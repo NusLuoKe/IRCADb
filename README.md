@@ -42,7 +42,8 @@ which has a coordinate of a approximately location of the liver in the original 
 ### **4. Model prediction on training set. (Patient 1) -- Mask-rcnn**
 
 
-***NOTE: Implemention of Mask-rcnn is based on [https://github.com/matterport/Mask_RCNN](https://github.com/matterport/Mask_RCNN).*** 
+***NOTE: Implemention of Mask-rcnn is based on [https://github.com/matterport/Mask_RCNN](https://github.com/matterport/Mask_RCNN). 
+Modified code to train on the 3DIRCADb data set are in the folder named mrcnn_seg*** 
   
 ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/mrcnn_p1.png)
 Above image shows the prediction result of one slice in the ITK-SNAP.  
