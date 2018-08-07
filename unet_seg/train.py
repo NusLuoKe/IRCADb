@@ -114,6 +114,11 @@ def display_batch_segment(images, labels, color_dicts=default_color_dict):
 
 
 def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
+    '''
+    :param output: inference of the model
+    :param target: mask(label)
+    :return: dice can be used in BP
+    '''
     inse = tf.reduce_sum(output * target, axis=axis)
     if loss_type == 'jaccard':
         l = tf.reduce_sum(output * output, axis=axis)
@@ -130,6 +135,11 @@ def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
 
 
 def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
+    '''
+    :param output: inference of the model
+    :param target: mask(label)
+    :return: dice can be used as the measurement of the model
+    '''
     output = tf.cast(output > threshold, dtype=tf.float32)
     target = tf.cast(target > threshold, dtype=tf.float32)
     inse = tf.reduce_sum(tf.multiply(output, target), axis=axis)
@@ -211,7 +221,7 @@ def train_and_val(gpu_id="0"):
 
                 _, train_loss, train_dice = sess.run([train_op, loss, dice],
                                                      feed_dict={x_img: train_batch_x, y_true: train_batch_y})
-
+                # # visualize a batch of images. 
                 # tl.vis.save_images(train_batch_x, [2, 2], './vis/ori_{}.png'.format(step))
                 # display = display_batch_segment(train_batch_x, train_batch_y)
                 # tl.vis.save_images(display, [2, 2], './vis/seg_{}.png'.format(step))

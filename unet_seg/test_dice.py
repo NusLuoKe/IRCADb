@@ -5,11 +5,9 @@
 # @Author  : NUS_LuoKe
 
 import tensorflow as tf
-import tensorlayer as tl
 
 from unet_seg import u_net
 from unet_seg.load_dicom import *
-import dicom
 
 # base_dir = "F:/IRCAD/3Dircadb1/"
 base_dir = "/home/guest/notebooks/datasets/3Dircadb"
@@ -18,10 +16,16 @@ gpu_id = "0"
 length = 512
 width = 512
 channel = 1
+# whether to save prediction results as dicom file.
 save_test_result = False
 
 
 def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
+    '''
+    :param output: inference of the model
+    :param target: mask(label)
+    :return: dice can be used in BP
+    '''
     inse = tf.reduce_sum(output * target, axis=axis)
     if loss_type == 'jaccard':
         l = tf.reduce_sum(output * output, axis=axis)
@@ -38,6 +42,11 @@ def dice_coe(output, target, loss_type='jaccard', axis=(1, 2, 3), smooth=1e-5):
 
 
 def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
+    '''
+    :param output: inference of the model
+    :param target: mask(label)
+    :return: dice can be used as the measurement of the model
+    '''
     output = tf.cast(output > threshold, dtype=tf.float32)
     target = tf.cast(target > threshold, dtype=tf.float32)
     inse = tf.reduce_sum(tf.multiply(output, target), axis=axis)
@@ -49,7 +58,7 @@ def dice_hard_coe(output, target, threshold=0.5, axis=(1, 2, 3), smooth=1e-5):
 
 
 def prediction(gpu_id="0"):
-    # GPU limit
+    # GPU limitation
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.per_process_gpu_memory_fraction = 0.9
@@ -64,7 +73,7 @@ def prediction(gpu_id="0"):
     sig_y_pred = tf.sigmoid(y_pred)
 
     # 2. loss
-    cross_entro = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=sig_y_pred))
+    # cross_entro = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=sig_y_pred))
     loss_dice = 1 - dice_coe(output=sig_y_pred, target=y_true)
     # loss = loss_dice + cross_entro
     loss = loss_dice
@@ -82,13 +91,15 @@ def prediction(gpu_id="0"):
         print("load checkpoint successfully...!")
         print("start to make prediction...")
 
-        # get test set from patient_19
+        # get test set from patient_1
         test_slice_path_list, test_mask_path_list = get_slice_mask_path(base_dir, patient_id_list=[1], shuffle=False)
         for test_slice_path in test_slice_path_list:
             # slice
             slice = pydicom.read_file(test_slice_path)
             # slice = dicom.read_file(test_slice_path)
             image_array = slice.pixel_array
+
+            # # preprocessing, cut the image value domain.
             # image_array[image_array < -1024] = -1024
             # image_array[image_array > 1024] = 1024
             # image_array = (image_array + 1024.) / 2048.

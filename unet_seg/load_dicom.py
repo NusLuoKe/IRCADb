@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 # @Time    : 2018/6/12 14:35
 # @File    : load_dicom.py
-# @Author  : NUS_LuoKe
 
+'''
+Methods to load dicom image.
+'''
 import math
 import os
 import random
