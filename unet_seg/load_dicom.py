@@ -288,27 +288,3 @@ def shuffle_parallel_list(list_1, list_2):
     return list_1, list_2
 
 
-###############################################################################################
-###############################################################################################
-###############################################################################################
-###############################################################################################
-###############################################################################################
-###############################################################################################
-# import matplotlib.pyplot as plt
-#
-# base_dir = "F:/IRCAD/3Dircadb1/"
-# patient_id_list = list(range(1, 4))
-# slice_path_list, mask_path_list = get_slice_mask_path(base_dir, patient_id_list, shuffle=True)
-# x_with_mask, y_with_mask, mask_num = filter_useless_data(slice_path_list, mask_path_list)
-#
-# for batch_x_y in get_batch(x_with_mask, y_with_mask, batch_size=1, crop_by_center=False):
-#     batch_x = batch_x_y[0]
-#     batch_y = batch_x_y[1]
-#     print(batch_x.shape)
-#     x = batch_x.reshape((512, 512))
-#     y = batch_y.reshape((512, 512))
-#     plt.imshow(x, cmap="gray")
-#     plt.show()
-#     plt.imshow(y, cmap="gray")
-#     plt.show()
-#     break
