@@ -80,11 +80,15 @@ Do not consider those slices without liver but predicted to have liver(noises),t
  
  ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/p1_pred_closing_cal.png)  
    
- Above image is the output after morphology processing. skimage.morphology.closing()  
+ Above image is the output after morphology processing. "skimage.morphology.closing()"  
    
  ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/p1_pred_final_post.png)  
  
- Above image is the final post processing result. Only reserve the largest connected domain.
+ Above image is the post processing result. After "skimage.morphology.closing() ", 
+ only reserve the largest connected domain.
+ 
+ ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/p1_pred_max_con_domain.png)  
+ In this case, just reserve the maximum connected domain can get the best result.  
  
 
 
