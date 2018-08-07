@@ -76,10 +76,12 @@ Do not consider those slices without liver but predicted to have liver(noises),t
  
  ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/p1_pred.png)  
    
- Above image is the output of MRCNN model.
+ Above image is the output of MRCNN model.  
+ 
  ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/p1_pred_closing_cal.png)  
    
  Above image is the output after morphology processing. skimage.morphology.closing()  
+   
  ![](https://github.com/NusLuoKe/IRCADb/blob/master/readme_img/p1_pred_final_post.png)  
  
  Above image is the final post processing result. Only reserve the largest connected domain.
